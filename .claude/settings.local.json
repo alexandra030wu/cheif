@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(npm view:*)",
+      "Bash(mkdir -p /Users/tiedan/cheif/src/app/\\\\\\(auth\\\\\\)/login /Users/tiedan/cheif/src/app/\\\\\\(auth\\\\\\)/signup /Users/tiedan/cheif/src/app/\\\\\\(auth\\\\\\)/callback)",
+      "Bash(mkdir -p /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/kitchen/add \"/Users/tiedan/cheif/src/app/\\(dashboard\\)/kitchen/[id]\")",
+      "Bash(mkdir -p /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/recipes/generate /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/recipes/saved \"/Users/tiedan/cheif/src/app/\\(dashboard\\)/recipes/[id]\")",
+      "Bash(mkdir -p /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/settings)",
+      "Bash(mkdir -p /Users/tiedan/cheif/src/app/api/recipes/generate /Users/tiedan/cheif/src/app/api/recipes/analyze)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(find /Users/tiedan/cheif/node_modules/next/dist/docs -type f -name *)",
+      "Bash(ls /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/_components/)",
+      "Bash(npx next:*)"
+    ]
+  }
+}
