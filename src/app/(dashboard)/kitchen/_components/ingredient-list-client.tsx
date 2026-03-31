@@ -69,7 +69,8 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
           />
         </svg>
         <input
-          type="text"
+          type="search"
+          autoComplete="off"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索食材..."
