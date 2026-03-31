@@ -59,6 +59,7 @@ async function SavedRecipeLoader() {
         steps: stepsArr,
         nutritionEstimate: r.nutrition_estimate as Recipe["nutritionEstimate"] ?? undefined,
         tags: r.tags ?? [],
+        coverImageUrl: r.cover_image_url ?? undefined,
       };
 
       return {

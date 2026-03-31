@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { RecipeSchema } from "@/lib/ai-service/types";
 import type { Json } from "@/lib/supabase/types";
+import { generateRecipeCover } from "@/lib/icon-generation";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -55,6 +56,16 @@ export async function POST(request: Request) {
   if (saveError) {
     return Response.json({ error: saveError.message }, { status: 500 });
   }
+
+  // Fire-and-forget cover image generation
+  void generateRecipeCover(inserted.id, recipe.title).then(async (coverUrl) => {
+    if (coverUrl) {
+      await supabase
+        .from("recipes")
+        .update({ cover_image_url: coverUrl })
+        .eq("id", inserted.id);
+    }
+  });
 
   return Response.json({ id: inserted.id, saved: true });
 }

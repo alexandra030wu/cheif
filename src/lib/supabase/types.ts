@@ -69,6 +69,7 @@ export interface Database {
           tags: string[] | null;
           generated_by: string | null;
           created_by: string | null;
+          cover_image_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -86,6 +87,7 @@ export interface Database {
           tags?: string[] | null;
           generated_by?: string | null;
           created_by?: string | null;
+          cover_image_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -100,6 +102,7 @@ export interface Database {
           steps?: Json;
           nutrition_estimate?: Json | null;
           tags?: string[] | null;
+          cover_image_url?: string | null;
         };
         Relationships: [];
       };

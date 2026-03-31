@@ -85,6 +85,17 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
+        {/* Cover image */}
+        {recipe.coverImageUrl && (
+          <div className="w-full aspect-[2/1] max-h-56">
+            <img
+              src={recipe.coverImageUrl}
+              alt={recipe.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         <div className="px-5 py-5 max-w-2xl mx-auto space-y-6">
           {/* Title & meta */}
           <div>

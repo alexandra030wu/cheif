@@ -64,6 +64,7 @@ export const RecipeSchema = z.object({
     })
     .optional(),
   tags: z.array(z.string()),
+  coverImageUrl: z.string().optional(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
