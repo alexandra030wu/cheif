@@ -37,6 +37,7 @@ export function SmartInput() {
   const [error, setError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const processedIndexRef = useRef(0);
 
   // ── Voice input ───────────────────────────────────────────────
   function toggleListening() {
@@ -66,13 +67,27 @@ export function SmartInput() {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     recognition.interimResults = false;
     recognitionRef.current = recognition;
+    processedIndexRef.current = 0;
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    recognition.onresult = (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
-      const transcript = Array.from(e.results)
-        .map((r) => (r[0] as { transcript: string }).transcript)
-        .join("");
-      setText((prev) => (prev ? prev + "，" + transcript : transcript));
+    recognition.onresult = (e: {
+      resultIndex: number;
+      results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
+    }) => {
+      // Only process new final results to avoid duplication.
+      // e.results accumulates all results since start — we track the last
+      // processed index so each final transcript is appended exactly once.
+      let newText = "";
+      for (let i = processedIndexRef.current; i < e.results.length; i++) {
+        const result = e.results[i];
+        if (result.isFinal) {
+          newText += (result[0] as { transcript: string }).transcript;
+          processedIndexRef.current = i + 1;
+        }
+      }
+      if (newText) {
+        setText((prev) => (prev ? prev + "，" + newText : newText));
+      }
     };
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
