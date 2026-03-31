@@ -1,22 +1,24 @@
 # Cheif — 智能厨房助手 PRD
 
-> 最后更新：2026-03-30
+> 最后更新：2026-04-01
 
 ---
 
 ## 1. 项目概述
 
-Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管理冰箱中的食材库存，并基于现有食材通过 AI 自动生成菜谱。
+Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式界面为核心入口，用户可以管理冰箱中的食材库存，通过对话获取基于现有食材的智能菜谱推荐，并在沉浸式 Cooking Mode 中跟随步骤完成烹饪。
 
 ### 核心价值
 
-- **食材管理**：记录家中食材，追踪保质期，减少浪费
+- **AI 对话式菜谱推荐**：基于用户食材库存、饮食偏好、时段智能推荐 2-3 道菜谱，结构化卡片展示
+- **食材管理**：Grid 网格展示食材，AI 生成食材图标，追踪保质期，临期食材优先推荐
+- **Cooking Mode**：沉浸式分步做菜模式，语音朗读 + 计时器，适合湿手操作
 - **AI 智能录入**：通过自然语言或语音快速批量录入食材
-- **AI 菜谱生成**：根据已有食材自动推荐菜谱，流式输出
+- **个性化**：用户偏好（饮食限制、过敏原、厨艺水平、厨具）融入 AI 推荐
 
 ### 目标用户
 
-个人/家庭用户，希望高效管理厨房食材并获取烹饪灵感。
+个人/家庭用户，希望高效管理厨房食材并获取个性化烹饪灵感。
 
 ---
 
@@ -28,12 +30,13 @@ Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管�
 | UI 层 | React | 19.2.4 |
 | 语言 | TypeScript | 5.x |
 | 样式 | Tailwind CSS | 4.x |
-| 后端/数据库 | Supabase (PostgreSQL + Auth + RLS) | — |
+| 后端/数据库 | Supabase (PostgreSQL + Auth + RLS + Storage) | — |
 | Supabase SDK | @supabase/ssr | 0.9.0 |
 | AI SDK | Vercel AI SDK (ai) | 6.0.141 |
-| AI 提供商 | @ai-sdk/openai, @ai-sdk/anthropic | 3.x |
+| AI 提供商（菜谱） | @ai-sdk/openai, @ai-sdk/anthropic | 3.x |
+| AI 提供商（图像） | Google Gemini Imagen 4.0 Fast | REST API |
 | Schema 验证 | Zod | 4.3.6 |
-| 客户端状态 | Zustand | 5.0.12 |
+| 客户端状态 | Zustand（persist 中间件） | 5.0.12 |
 | 构建工具 | Turbopack | 内置于 Next.js 16 |
 
 ### 环境变量
@@ -42,10 +45,12 @@ Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管�
 |------|------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务端管理密钥（图标/封面上传） |
 | `AI_PROVIDER` | AI 提供商选择 (`openai` / `anthropic` / `ollama`) |
 | `OPENAI_API_KEY` | OpenAI API 密钥 |
 | `ANTHROPIC_API_KEY` | Anthropic API 密钥 |
 | `OLLAMA_BASE_URL` | Ollama 服务地址（默认 `http://localhost:11434/v1`） |
+| `GEMINI_API_KEY` | Google Gemini API 密钥（Imagen 图像生成） |
 | `HTTPS_PROXY` | HTTP 代理地址（可选，用于 Anthropic） |
 
 ---
@@ -59,62 +64,160 @@ Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管�
 - 邮箱 + 密码注册和登录，基于 Supabase Auth
 - Server Actions (`login` / `signup` / `logout`) 处理认证逻辑
 - `useActionState` 管理表单状态，显示加载态和错误信息
-- 登录/注册成功后 `redirect("/kitchen")`
+- 登录/注册成功后 `redirect("/chat")`
 - OAuth 回调路由 (`/callback`) 支持第三方登录扩展
 
 **认证守卫（双重保护）：**
 
-1. **Proxy 层**（`src/proxy.ts`）：拦截所有请求，未登录用户访问受保护路由重定向到 `/login`，已登录用户访问 auth 页面重定向到 `/kitchen`
+1. **Proxy 层**（`src/proxy.ts`）：拦截所有请求，未登录用户 → `/login`，已登录用户访问 auth 页面 → `/chat`
 2. **Layout 层**（Dashboard Layout）：服务端 `getUser()` 检查，未登录 `redirect("/login")`
 
-**侧边栏：** 底部显示当前用户邮箱 + 退出登录按钮。
+**导航：** 左上角汉堡菜单（滑出抽屉），包含聊天、食材库、菜谱、个人设置 + 用户邮箱 + 退出登录。
 
-### 3.2 食材管理
+### 3.2 AI 对话式首页
+
+**路由：** `/chat`（应用主入口，`/` 重定向至此）
+
+#### 对话界面
+
+- 顶部标题栏「🍳 Cheif」+ 「清空对话」按钮
+- 中间消息区：用户消息右对齐深色气泡，AI 消息左对齐 + 结构化菜谱卡片
+- 底部输入框：自动伸缩 textarea + 发送按钮，safe-area 适配
+- 加载动画：三点跳动 + 「正在翻菜谱…」
+
+#### 时段提示词卡片
+
+- 初始状态（无消息时）显示欢迎页 + 可点击提示词
+- 根据时段自动切换：早餐（5-10点）/ 午餐（11-14点）/ 晚餐（15-20点）/ 夜宵
+- 通用提示词：「惊喜菜谱」「HOT 热门菜」「健身餐」「快手10分钟」
+- 点击自动作为用户消息发送
+
+#### AI 菜谱响应
+
+- `generateObject` + `ChatResponseSchema`（reply 文本 + recipes 数组）
+- 返回 2-3 道结构化菜谱卡片
+- 每张卡片：封面图（AI 生成或渐变占位）、菜名、时间、难度 badge、食材摘要
+- 临期食材标签：使用了临期食材的菜谱显示「🔥 消耗临期食材」徽章
+- AI 自动读取用户食材库、偏好（饮食限制/过敏原/厨艺/厨具/默认人份）、临期食材
+
+#### 对话持久化
+
+- Zustand `persist` 中间件缓存消息到 `localStorage`
+- 页面切换/刷新后自动恢复对话记录
+- 「清空对话」按钮重置
+
+### 3.3 菜谱详情页
+
+点击菜谱卡片打开全屏 Sheet：
+
+- **封面图**：顶部全宽展示（移动端 h-48，桌面端 h-300px，object-cover）
+- **透明导航栏**：有封面图时叠在图片上方，白色文字 + 渐变遮罩；无封面图保留白色导航
+- **动态 theme-color**：打开时改为 #000000 融入封面图，关闭时恢复
+- **内容区**：标题、描述、菜系/份数/时间/难度、标签、完整食材清单、分步骤说明、营养估算
+- **底部操作栏**：「开始制作」（进入 Cooking Mode）+「收藏」按钮（成功后变绿色禁用态）
+
+### 3.4 Cooking Mode（沉浸式做菜模式）
+
+从菜谱详情页点击「开始制作」进入：
+
+- **全屏深色界面**（`bg-gray-950`），z-index 60
+- **进度条**：顶部白色进度条 + 当前步/总步数
+- **步骤展示**：每步占满屏，圆形步骤编号 + 大字指令居中
+- **左右滑动 / 箭头按钮**切换上一步/下一步
+- **计时器**：步骤有 `durationMinutes` 时自动显示倒计时按钮，支持开始/暂停/重置
+- **语音朗读**：Web Speech Synthesis API，切换步骤自动中文朗读，计时结束语音提醒
+- **完成烹饪**：最后一步显示「完成烹饪」全宽按钮，返回详情页
+- **移动端优先**：大触摸区域（`py-4` 按钮），适合湿手操作
+
+### 3.5 菜谱保存与收藏
+
+**路由：** `/recipes`
+
+- 收藏菜谱列表：左图右文横向卡片布局，封面缩略图/渐变占位 + 菜名/难度/时间/食材
+- 点击卡片打开详情 Sheet（复用聊天页组件，`alreadySaved` 模式）
+- 支持删除收藏（`deleteSavedRecipe` Server Action，同时删除 recipes + saved_recipes 记录）
+- 空状态引导去聊天页生成菜谱
+
+### 3.6 菜谱封面图
+
+- 收藏菜谱时自动调用 Gemini Imagen 生成封面（fire-and-forget）
+- Prompt：`"A beautiful plated dish of [菜名], top-down food photography, natural lighting, white plate, restaurant quality, appetizing"`
+- 存储到 Supabase Storage `recipe-covers` bucket
+- 菜谱卡片顶部展示封面图，无图时显示渐变色占位
+
+### 3.7 食材管理
 
 **路由：** `/kitchen`、`/kitchen/add`
 
-#### 食材列表页 (`/kitchen`)
+#### 食材库 Grid 网格展示 (`/kitchen`)
 
-- 服务端组件，直接查询 Supabase `ingredients` 表
-- 按 `created_at` 倒序展示
-- 每条食材显示：分类标签（彩色 badge）、名称、数量+单位、保质期
-- 保质期状态：正常（灰色）、3 天内过期（橙色）、已过期（红色）
-- 支持单条删除（`deleteIngredient` Server Action）
-- 空状态引导
+- **Grid 布局**：3 列手机 / 4 列 sm / 5 列 md
+- **食材瓷砖**：AI 生成图标（64x64）或分类 emoji 回退 + 名称 + 数量/过期状态
+- **搜索框**：实时关键字过滤
+- **分类筛选标签栏**：全部/蔬菜/水果/蛋白质/乳制品/谷物/香料/调味品/其他，横向滚动
+- **搜索 + 筛选叠加**，空结果友好提示 + 清除筛选按钮
+- **保质期排序**：默认按保质期升序，最紧急排最前，无保质期排最后
+- **三级过期标记**：已过期（红色边框）、3 天内（橙色）、7 天内（黄色）
+- **过期横幅**：有过期食材时顶部显示「⚠️ 你有 N 个食材已过期，建议尽快处理」
+- **点击编辑**：底部 Sheet 编辑表单（名称、分类、数量、单位、保质期）
+
+#### AI 食材图标
+
+- 添加食材时自动异步调用 Gemini Imagen 生成图标（fire-and-forget，不阻塞添加）
+- Prompt：`"A realistic food icon of exactly [名称], on a pure white background, centered, no text, no shadow, product photography style, high definition"`
+- 存储到 Supabase Storage `ingredient-icons` bucket，URL 写入 `icon_url`
+- 无图标时用分类 emoji 回退（🥬🍎🥩🧀🌾🧂🫙📦）
 
 #### 手动录入 (`/kitchen/add` → 手动录入 Tab)
 
 - 表单字段：食材名称*、分类*、数量、单位、保质期
-- 分类枚举：蔬菜、水果、蛋白质、乳制品、谷物、香料、调味品、其他
-- Zod Schema 验证（`IngredientFormSchema`）
-- `addIngredient` Server Action，成功后跳转回列表
+- Zod Schema 验证，`addIngredient` Server Action
 
 #### 智能录入 (`/kitchen/add` → 智能录入 Tab)
 
 - 文本输入框 + 语音输入（Web Speech API，支持中文）
-- 调用 `/api/ingredients/parse` 接口，AI 解析自然语言为结构化食材数据
-- 解析结果以可编辑表格展示（名称、数量、单位、分类均可修改）
-- 支持删除单条解析结果
-- 确认后调用 `bulkAddIngredients` 批量保存
+- AI 解析自然语言为结构化食材数据
+- 解析结果可编辑（移动端卡片布局 / 桌面端表格布局）
+- 确认后 `bulkAddIngredients` 批量保存
+- 离开页面自动停止麦克风（`useEffect` cleanup）
 
-### 3.3 AI 菜谱生成
-
-**路由：** `/recipes/generate`
-
-- 服务端获取当前用户食材列表，传入客户端组件
-- 展示当前食材库摘要（标签云形式）
-- 点击生成按钮，POST `/api/recipes/generate`
-- 流式输出（`ReadableStream`），逐字展示生成结果
-- 带光标动画的打字机效果
-- 错误处理 + 空食材库引导
-
-### 3.4 食材分析
+### 3.8 食材分析
 
 **API：** `POST /api/recipes/analyze`
 
 - 输入食材名称，返回 AI 分析结果
 - 输出：分类、保质期天数、储存建议、常见搭配、替代品
-- 使用 `generateObject` + `IngredientInfoSchema` 结构化输出
+
+### 3.9 用户个人资料
+
+**路由：** `/settings`
+
+- **头像**：emoji 头像选择（12 种 emoji）
+- **昵称**
+- **默认人份**：1人食 / 2人食 / 一家三口 / 聚餐4-6人
+- **饮食偏好**：多选（素食/清真/无麸质/低碳水/低脂/无乳糖）
+- **过敏原**：多选（花生/坚果/海鲜/鸡蛋/牛奶/大豆/小麦/芝麻），AI 自动避开
+- **厨艺水平**：单选（新手/进阶/大厨），AI 匹配难度
+- **常用厨具**：多选（烤箱/空气炸锅/微波炉/电饭煲/面包机/搅拌机/蒸锅）
+- 保存到 Supabase `profiles` 表（upsert）
+- AI 菜谱生成时自动读取偏好并注入 prompt
+
+### 3.10 PWA 支持
+
+- `manifest.json`：应用名 Cheif，standalone 模式，深色主题 `#111827`
+- PNG 图标（192x192 / 512x512）：🍳 emoji + 深色圆角背景
+- Service Worker：导航请求 network-first，静态资源 cache-first，API/auth 不缓存
+- iOS 主屏幕支持：`apple-touch-icon`、`appleWebApp` meta
+- `viewport-fit=cover` + 全局 `safe-area-inset-top` padding 适配 PWA 全屏模式
+
+### 3.11 性能优化
+
+- 各页面 `loading.tsx` 骨架屏
+- Suspense 流式渲染（header 即时，数据流式加载）
+- `React.memo`（IngredientItem、RecipeCard、IngredientTag、MessageBubble）
+- `React.lazy`（SmartInput 按需加载）
+- `useMemo` / `useCallback` 避免不必要计算和重渲染
+- `revalidatePath` 精准缓存失效
 
 ---
 
@@ -130,13 +233,17 @@ Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管�
 |------|------|------|
 | id | uuid (PK) | 关联 `auth.users(id)`，级联删除 |
 | display_name | text | 显示名称 |
-| avatar_url | text | 头像 URL |
-| dietary_restrictions | text[] | 饮食限制 |
-| preferred_cuisine | text[] | 偏好菜系 |
+| avatar_url | text | 头像（emoji） |
+| nickname | text | 昵称 |
+| dietary_restrictions | text[] | 饮食限制（旧字段） |
+| preferred_cuisine | text[] | 偏好菜系（旧字段） |
+| dietary_preferences | jsonb | 饮食偏好（素食/清真/无麸质等） |
+| allergies | text[] | 过敏原（花生/坚果/海鲜等） |
+| cooking_level | text | 厨艺水平（beginner/intermediate/expert） |
+| kitchen_equipment | text[] | 常用厨具 |
+| default_servings | text | 默认人份 |
 | created_at | timestamptz | 创建时间 |
 | updated_at | timestamptz | 更新时间 |
-
-**RLS 策略：** 用户只能查看和更新自己的档案。
 
 ### 4.2 ingredients
 
@@ -152,12 +259,9 @@ Cheif 是一款面向个人用户的智能厨房管理应用。用户可以管�
 | unit | text | 单位 |
 | expiry_date | date | 保质期 |
 | notes | text | 备注 |
+| icon_url | text | AI 生成的食材图标 URL |
 | created_at | timestamptz | 创建时间 |
 | updated_at | timestamptz | 更新时间 |
-
-**索引：** `user_id`、`category`、`expiry_date`
-
-**RLS 策略：** `auth.uid() = user_id`，用户只能管理自己的食材（SELECT / INSERT / UPDATE / DELETE）。
 
 ### 4.3 recipes
 
@@ -177,13 +281,10 @@ AI 生成的菜谱。
 | steps | jsonb | 步骤列表（结构化），NOT NULL |
 | nutrition_estimate | jsonb | 营养估算 |
 | tags | text[] | 标签 |
+| cover_image_url | text | AI 生成的菜品封面图 URL |
 | generated_by | text | 生成该菜谱的 AI 提供商 |
 | created_by | uuid (FK → auth.users) | 创建者 |
 | created_at | timestamptz | 创建时间 |
-
-**索引：** `created_by`、`tags`（GIN）
-
-**RLS 策略：** 所有认证用户可查看；只有创建者可插入。
 
 ### 4.4 saved_recipes
 
@@ -196,74 +297,75 @@ AI 生成的菜谱。
 | recipe_id | uuid (FK → recipes) | 菜谱 ID，级联删除，NOT NULL |
 | saved_at | timestamptz | 收藏时间 |
 
-**唯一约束：** `(user_id, recipe_id)`
+### 4.5 Supabase Storage Buckets
 
-**RLS 策略：** `auth.uid() = user_id`，用户只能管理自己的收藏。
+| Bucket | 公开 | 用途 |
+|--------|------|------|
+| `ingredient-icons` | 是 | 食材 AI 图标 PNG |
+| `recipe-covers` | 是 | 菜谱封面图 PNG |
 
 ---
 
 ## 5. API 接口
 
-### 5.1 `POST /api/ingredients/parse`
+### 5.1 `POST /api/chat`
 
-AI 智能解析自然语言中的食材信息。
+AI 对话式菜谱推荐（主接口）。
 
 **请求体：**
 ```json
-{ "text": "鸡胸肉500克、西红柿3个、盐一袋" }
+{
+  "message": "来点晚餐灵感",
+  "ingredients": ["鸡胸肉", "西红柿", "洋葱"],
+  "urgentIngredients": ["西红柿"],
+  "timeOfDay": "evening",
+  "preferences": {
+    "dietary_preferences": ["低碳水"],
+    "allergies": ["花生"],
+    "cooking_level": "intermediate",
+    "kitchen_equipment": ["烤箱", "空气炸锅"],
+    "default_servings": "2人食"
+  }
+}
 ```
 
 **响应：**
 ```json
 {
-  "items": [
-    { "name": "鸡胸肉", "quantity": 500, "unit": "克", "category": "protein" },
-    { "name": "西红柿", "quantity": 3, "unit": "个", "category": "vegetable" },
-    { "name": "盐", "quantity": 1, "unit": "袋", "category": "condiment" }
+  "reply": "根据你的食材，推荐这几道晚餐：",
+  "recipes": [
+    {
+      "title": "番茄鸡胸肉",
+      "description": "...",
+      "cuisine": "中式",
+      "servings": 2,
+      "prepTimeMinutes": 10,
+      "cookTimeMinutes": 20,
+      "difficulty": "easy",
+      "ingredients": [{ "name": "鸡胸肉", "amount": "200", "unit": "克" }],
+      "steps": [{ "order": 1, "instruction": "...", "durationMinutes": 5 }],
+      "tags": ["消耗临期食材"],
+      "coverImageUrl": null
+    }
   ]
 }
 ```
 
-**实现：** `generateObject` + Zod Schema，temperature 0.2。
+### 5.2 `POST /api/recipes/save`
 
-### 5.2 `POST /api/recipes/generate`
+收藏菜谱。自动触发封面图生成。
 
-根据食材生成菜谱（流式输出）。
+### 5.3 `POST /api/ingredients/parse`
 
-**请求体：**
-```json
-{
-  "ingredients": ["鸡胸肉", "西红柿", "盐"],
-  "cuisine": "中式",
-  "servings": 2,
-  "difficulty": "easy"
-}
-```
+AI 智能解析自然语言中的食材信息。
 
-**响应：** `Content-Type: text/plain; charset=utf-8`，流式文本。
+### 5.4 `POST /api/recipes/generate`
 
-**验证：** `RecipeGenerationRequestSchema`（Zod），至少 1 种食材。
+根据食材生成菜谱（流式输出，旧接口，保留兼容）。
 
-### 5.3 `POST /api/recipes/analyze`
+### 5.5 `POST /api/recipes/analyze`
 
 分析单个食材的详细信息。
-
-**请求体：**
-```json
-{ "name": "鸡胸肉", "description": "冷冻的" }
-```
-
-**响应：**
-```json
-{
-  "name": "鸡胸肉",
-  "category": "protein",
-  "shelfLifeDays": 180,
-  "storageTip": "冷冻保存，解冻后尽快食用",
-  "commonPairings": ["西兰花", "蘑菇", "青椒"],
-  "substitutes": ["鸡腿肉", "猪里脊", "豆腐"]
-}
-```
 
 ---
 
@@ -280,6 +382,7 @@ src/lib/ai-service/
 ├── index.ts          # createAIService() 工厂 + getAIService() 单例
 └── prompts/
     ├── recipe-generation.ts     # 菜谱生成 prompt 模板
+    ├── chat-recipe.ts           # 对话式菜谱 prompt（含用户偏好 + 临期食材）
     └── ingredient-analysis.ts   # 食材分析 prompt 模板
 ```
 
@@ -290,70 +393,39 @@ interface AIService {
   generateRecipe(input: RecipeGenerationInput): Promise<Recipe>;
   streamRecipe(input: RecipeGenerationInput): Promise<ReadableStream<string>>;
   analyzeIngredient(input: IngredientAnalysisInput): Promise<IngredientInfo>;
+  generateChatRecipes(input: ChatRecipeInput): Promise<ChatResponse>;
   getProvider(): AIProviderID;
 }
 ```
 
-### 支持的提供商
+### 图像生成
 
-| 提供商 | 默认模型 | 说明 |
-|--------|----------|------|
-| OpenAI | gpt-4o | 通过 `@ai-sdk/openai` |
-| Anthropic | claude-sonnet-4-20250514 | 通过 `@ai-sdk/anthropic`，支持 HTTPS 代理 |
-| Ollama | llama3 | 复用 OpenAI 兼容 API，本地部署 |
+`src/lib/icon-generation.ts`：
 
-### 切换方式
-
-设置环境变量 `AI_PROVIDER=openai|anthropic|ollama` 即可切换，无需修改代码。也可通过 `createAIService({ id: "anthropic", model: "..." })` 在代码中覆盖配置。
-
-### 结构化输出
-
-- **菜谱生成**：`generateObject` + `RecipeSchema`（标题、食材、步骤、营养等）
-- **菜谱流式**：`streamText` 返回 `ReadableStream`
-- **食材分析**：`generateObject` + `IngredientInfoSchema`（分类、保质期、搭配等）
-- **食材解析**：`generateObject` + `ParsedIngredientListSchema`
+- `generateAndStoreIcon(ingredientId, name)` — 食材图标生成
+- `generateAndStoreCover(recipeId, dishName)` — 菜谱封面生成
+- 共享 `generateImage()` 调用 Gemini Imagen 4.0 Fast API
+- 使用 `src/lib/supabase/admin.ts`（service role client）上传 Storage
 
 ---
 
 ## 7. 待开发功能
 
-### 7.1 菜谱保存与管理
+### 7.1 菜谱生成增强
 
-- 将 AI 生成的菜谱结构化保存到 `recipes` 表
-- 菜谱收藏功能（利用已有的 `saved_recipes` 表）
-- 菜谱列表页 `/recipes` 展示已保存/收藏的菜谱
-- 菜谱详情页
-
-### 7.2 菜谱生成增强
-
-- 支持指定菜系、份数、难度、烹饪时间等参数（Schema 已就绪）
-- 饮食限制过滤（素食、无麸质等）
+- 支持指定菜系、份数、难度、烹饪时间等参数
 - 自由备注输入
-- 生成结果从纯文本流改为结构化卡片展示
+- 生成结果改为流式结构化输出（当前为非流式 `generateObject`）
 
-### 7.3 食材管理增强
+### 7.2 食材管理增强
 
-- 食材编辑功能（目前只有新增和删除）
-- 按分类筛选和搜索
-- 保质期提醒通知
 - 食材用量扣减（做菜后自动减少库存）
+- 保质期推送提醒通知
 
-### 7.4 用户档案
-
-- 个人设置页面（利用已有的 `profiles` 表）
-- 饮食偏好设置（影响菜谱生成）
-- 偏好菜系设置
-
-### 7.5 社交功能
+### 7.3 社交功能
 
 - 菜谱分享（公开/私密）
 - 浏览其他用户的公开菜谱（RLS 已支持认证用户可读所有菜谱）
-
-### 7.6 移动端适配
-
-- 响应式布局优化
-- PWA 支持
-- 移动端语音输入体验优化
 
 ---
 
@@ -368,27 +440,53 @@ src/
 │   │   ├── signup/page.tsx      # 注册页
 │   │   └── callback/route.ts    # OAuth 回调
 │   ├── (dashboard)/             # 受保护的主应用路由组
-│   │   ├── layout.tsx           # 侧边栏布局 + 认证守卫
-│   │   ├── _components/         # Dashboard 共享组件
+│   │   ├── layout.tsx           # 汉堡菜单布局 + 认证守卫 + safe-area
+│   │   ├── _components/         # 汉堡菜单、退出按钮
+│   │   ├── chat/                # AI 对话式首页
+│   │   │   ├── page.tsx         # 聊天页（服务端获取食材+偏好）
+│   │   │   ├── loading.tsx      # 骨架屏
+│   │   │   └── _components/     # ChatInterface、PromptCards、RecipeCard、
+│   │   │                        # MessageBubble、ChatInput、RecipeDetailSheet、
+│   │   │                        # CookingMode
 │   │   ├── kitchen/             # 食材管理
-│   │   │   ├── page.tsx         # 食材列表
-│   │   │   ├── actions.ts       # CRUD Server Actions
-│   │   │   ├── add/page.tsx     # 添加食材
-│   │   │   └── _components/     # 表单、智能输入、删除按钮
-│   │   └── recipes/             # 菜谱
-│   │       ├── page.tsx         # 菜谱列表（待完善）
-│   │       └── generate/        # AI 菜谱生成
+│   │   │   ├── page.tsx         # 食材 Grid 网格
+│   │   │   ├── loading.tsx      # 骨架屏
+│   │   │   ├── actions.ts       # CRUD Server Actions + 图标生成触发
+│   │   │   ├── add/page.tsx     # 添加食材（手动/智能 Tab）
+│   │   │   └── _components/     # IngredientItem、IngredientListClient、
+│   │   │                        # EditIngredientSheet、AddForm、SmartInput
+│   │   ├── recipes/             # 收藏菜谱
+│   │   │   ├── page.tsx         # 收藏列表
+│   │   │   ├── loading.tsx      # 骨架屏
+│   │   │   ├── actions.ts       # deleteSavedRecipe
+│   │   │   └── _components/     # SavedRecipeList、DeleteRecipeButton
+│   │   └── settings/            # 个人设置
+│   │       ├── page.tsx         # 设置页
+│   │       ├── actions.ts       # saveProfile
+│   │       └── _components/     # SettingsForm
 │   ├── api/                     # API 路由
+│   │   ├── chat/                # AI 对话菜谱推荐
 │   │   ├── ingredients/parse/   # 食材智能解析
-│   │   └── recipes/             # 菜谱生成 + 食材分析
-│   ├── layout.tsx               # 根布局
-│   └── page.tsx                 # 首页（重定向到 /kitchen）
+│   │   └── recipes/             # 菜谱生成 + 分析 + 保存
+│   ├── layout.tsx               # 根布局（PWA manifest + theme-color + SW）
+│   └── page.tsx                 # 首页（重定向到 /chat）
 ├── lib/
-│   ├── ai-service/              # AI 抽象层
-│   ├── supabase/                # Supabase 客户端（browser / server / types）
-│   ├── validators/              # Zod 验证 Schema
-│   └── utils.ts                 # 工具函数
+│   ├── ai-service/              # AI 抽象层（types / registry / prompts）
+│   ├── icon-generation.ts       # Gemini Imagen 图标/封面生成
+│   ├── supabase/                # Supabase 客户端（browser / server / admin / types）
+│   ├── validators/              # Zod 验证 Schema（chat / ingredient / recipe）
+│   └── utils.ts                 # 工具函数（cn / formatDate）
 ├── stores/                      # Zustand 状态管理
+│   ├── chat-store.ts            # 聊天消息持久化（localStorage）
+│   ├── recipe-store.ts          # 菜谱状态
+│   └── ingredient-store.ts      # 食材状态
 ├── components/                  # 全局共享组件
-└── proxy.ts                     # Next.js 16 Proxy（原 Middleware）
+│   ├── providers.tsx            # Provider 包装
+│   └── sw-register.tsx          # Service Worker 注册
+├── proxy.ts                     # Next.js 16 Proxy（认证路由守卫）
+└── public/
+    ├── manifest.json            # PWA Manifest
+    ├── sw.js                    # Service Worker
+    ├── icon-192.png             # PWA 图标 192x192
+    └── icon-512.png             # PWA 图标 512x512
 ```
