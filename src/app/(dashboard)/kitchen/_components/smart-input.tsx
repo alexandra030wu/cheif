@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bulkAddIngredients } from "../actions";
 
@@ -38,6 +38,14 @@ export function SmartInput() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const processedIndexRef = useRef(0);
+
+  // ── Cleanup: stop recognition when unmounted ─────────────────
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      recognitionRef.current?.stop();
+    };
+  }, []);
 
   // ── Voice input ───────────────────────────────────────────────
   function toggleListening() {
