@@ -73,6 +73,9 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
           autoComplete="off"
           name="ingredient-search"
           role="searchbox"
+          data-1p-ignore
+          data-lpignore="true"
+          data-form-type="other"
           suppressHydrationWarning
           value={search}
           onChange={(e) => setSearch(e.target.value)}
