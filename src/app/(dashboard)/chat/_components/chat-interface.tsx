@@ -135,7 +135,7 @@ export function ChatInterface({ ingredients }: Props) {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <header className="shrink-0 flex items-center justify-center py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12">
+      <header className="shrink-0 flex items-center justify-center py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12">
         <span className="text-base font-bold text-gray-900">
           🍳 Cheif
         </span>
