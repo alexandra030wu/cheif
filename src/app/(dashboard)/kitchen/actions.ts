@@ -15,7 +15,7 @@ async function getAuthUserId() {
 
 function revalidateIngredients() {
   revalidatePath("/kitchen");
-  revalidatePath("/recipes/generate");
+  revalidatePath("/chat");
 }
 
 export type AddIngredientState =

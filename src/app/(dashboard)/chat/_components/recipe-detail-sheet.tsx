@@ -17,6 +17,7 @@ interface Props {
 export function RecipeDetailSheet({ recipe, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -28,9 +29,10 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
     }
   }, [recipe]);
 
-  // Reset saved state when recipe changes
+  // Reset state when recipe changes
   useEffect(() => {
     setSaved(false);
+    setSaveError("");
   }, [recipe]);
 
   if (!recipe) return null;
@@ -40,13 +42,21 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
   async function handleSave() {
     if (!recipe || saving || saved) return;
     setSaving(true);
+    setSaveError("");
     try {
       const res = await fetch("/api/recipes/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(recipe),
       });
-      if (res.ok) setSaved(true);
+      if (res.ok) {
+        setSaved(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(typeof data?.error === "string" ? data.error : "收藏失败，请重试");
+      }
+    } catch {
+      setSaveError("网络错误，请重试");
     } finally {
       setSaving(false);
     }
@@ -206,13 +216,16 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
 
       {/* Bottom action bar */}
       <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
+        {saveError && (
+          <p className="text-xs text-red-500 text-center mb-2">{saveError}</p>
+        )}
         <div className="flex gap-3 max-w-2xl mx-auto">
           <button
             type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-400 cursor-default"
+            disabled
           >
-            开始制作
+            开始制作（敬请期待）
           </button>
           <button
             type="button"
