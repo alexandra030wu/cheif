@@ -71,6 +71,9 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
         <input
           type="search"
           autoComplete="off"
+          name="ingredient-search"
+          role="searchbox"
+          suppressHydrationWarning
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索食材..."
