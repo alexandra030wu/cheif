@@ -13,9 +13,10 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 interface Props {
   recipe: Recipe | null;
   onClose: () => void;
+  alreadySaved?: boolean;
 }
 
-export function RecipeDetailSheet({ recipe, onClose }: Props) {
+export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -33,10 +34,10 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
 
   // Reset state when recipe changes
   useEffect(() => {
-    setSaved(false);
+    setSaved(alreadySaved ?? false);
     setSaveError("");
     setCooking(false);
-  }, [recipe]);
+  }, [recipe, alreadySaved]);
 
   if (!recipe) return null;
 
