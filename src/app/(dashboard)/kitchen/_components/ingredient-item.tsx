@@ -32,6 +32,7 @@ interface Props {
   quantity: number | null;
   unit: string | null;
   expiry_date: string | null;
+  onTap?: () => void;
 }
 
 export const IngredientItem = memo(function IngredientItem({
@@ -41,6 +42,7 @@ export const IngredientItem = memo(function IngredientItem({
   quantity,
   unit,
   expiry_date,
+  onTap,
 }: Props) {
   const isExpired = expiry_date ? new Date(expiry_date) < new Date() : false;
   const isExpiringSoon =
@@ -49,7 +51,13 @@ export const IngredientItem = memo(function IngredientItem({
       : false;
 
   return (
-    <div className="flex items-center gap-3 md:gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-gray-200 transition-colors">
+    <div
+      role={onTap ? "button" : undefined}
+      tabIndex={onTap ? 0 : undefined}
+      onClick={onTap}
+      onKeyDown={onTap ? (e) => { if (e.key === "Enter") onTap(); } : undefined}
+      className={`flex items-center gap-3 md:gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-gray-200 transition-colors ${onTap ? "cursor-pointer active:bg-gray-50" : ""}`}
+    >
       <span
         className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
           CATEGORY_COLORS[category] ?? CATEGORY_COLORS.other
@@ -81,7 +89,9 @@ export const IngredientItem = memo(function IngredientItem({
         </span>
       )}
 
-      <DeleteButton id={id} />
+      <span onClick={(e) => e.stopPropagation()}>
+        <DeleteButton id={id} />
+      </span>
     </div>
   );
 });

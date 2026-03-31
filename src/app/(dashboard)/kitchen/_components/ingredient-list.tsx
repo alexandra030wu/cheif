@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { IngredientItem } from "./ingredient-item";
+import { IngredientListClient } from "./ingredient-list-client";
 
 export async function IngredientList() {
   const supabase = await createClient();
@@ -24,24 +24,14 @@ export async function IngredientList() {
     );
   }
 
-  return (
-    <>
-      <p className="text-sm text-gray-400 mt-1 mb-8">
-        共 {ingredients.length} 种食材
-      </p>
-      <div className="space-y-2">
-        {ingredients.map((item) => (
-          <IngredientItem
-            key={item.id}
-            id={item.id}
-            name={item.name}
-            category={item.category}
-            quantity={item.quantity}
-            unit={item.unit}
-            expiry_date={item.expiry_date}
-          />
-        ))}
-      </div>
-    </>
-  );
+  const items = ingredients.map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    quantity: item.quantity,
+    unit: item.unit,
+    expiry_date: item.expiry_date,
+  }));
+
+  return <IngredientListClient ingredients={items} />;
 }

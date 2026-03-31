@@ -53,6 +53,37 @@ export async function addIngredient(
   return { status: "success" };
 }
 
+export type UpdateIngredientResult =
+  | { status: "success" }
+  | { status: "error"; fieldErrors?: Record<string, string[]>; message?: string };
+
+export async function updateIngredient(
+  id: string,
+  data: {
+    name: string;
+    category: string;
+    quantity?: number;
+    unit?: string;
+    expiry_date?: string;
+  }
+): Promise<UpdateIngredientResult> {
+  const parsed = IngredientFormSchema.safeParse(data);
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const { supabase } = await getAuthUserId();
+  const { error } = await supabase
+    .from("ingredients")
+    .update(parsed.data)
+    .eq("id", id);
+
+  if (error) return { status: "error", message: error.message };
+
+  revalidateIngredients();
+  return { status: "success" };
+}
+
 export async function deleteIngredient(id: string) {
   const { supabase } = await getAuthUserId();
   await supabase.from("ingredients").delete().eq("id", id);
