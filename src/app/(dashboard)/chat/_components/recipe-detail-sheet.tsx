@@ -22,12 +22,21 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
   const [saveError, setSaveError] = useState("");
   const [cooking, setCooking] = useState(false);
 
-  // Prevent body scroll when open
+  // Prevent body scroll when open + dynamic theme-color
   useEffect(() => {
     if (recipe) {
       document.body.style.overflow = "hidden";
+
+      // Set dark theme-color when cover image is present
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const original = meta?.getAttribute("content") ?? "#111827";
+      if (recipe.coverImageUrl && meta) {
+        meta.setAttribute("content", "#000000");
+      }
+
       return () => {
         document.body.style.overflow = "";
+        if (meta) meta.setAttribute("content", original);
       };
     }
   }, [recipe]);
