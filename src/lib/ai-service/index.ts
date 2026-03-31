@@ -3,13 +3,16 @@ import { createLanguageModelProvider, resolveProviderConfig } from "./registry";
 import {
   RecipeSchema,
   IngredientInfoSchema,
+  ChatResponseSchema,
   type AIService,
   type AIProviderConfig,
   type RecipeGenerationInput,
   type IngredientAnalysisInput,
+  type ChatRecipeInput,
 } from "./types";
 import { buildRecipePrompt } from "./prompts/recipe-generation";
 import { buildIngredientPrompt } from "./prompts/ingredient-analysis";
+import { buildChatRecipePrompt } from "./prompts/chat-recipe";
 
 export function createAIService(overrides?: Partial<AIProviderConfig>): AIService {
   const config = resolveProviderConfig(overrides);
@@ -47,6 +50,17 @@ export function createAIService(overrides?: Partial<AIProviderConfig>): AIServic
       return object;
     },
 
+    async generateChatRecipes(input: ChatRecipeInput) {
+      const { object } = await generateObject({
+        model,
+        schema: ChatResponseSchema,
+        prompt: buildChatRecipePrompt(input),
+        temperature: config.temperature ?? 0.7,
+        maxOutputTokens: config.maxTokens ?? 4096,
+      });
+      return object;
+    },
+
     getProvider() {
       return config.id;
     },
@@ -62,4 +76,4 @@ export function getAIService(): AIService {
   return defaultService;
 }
 
-export type { AIService, AIProviderID, AIProviderConfig, Recipe, IngredientInfo } from "./types";
+export type { AIService, AIProviderID, AIProviderConfig, Recipe, IngredientInfo, ChatResponse, ChatRecipeInput } from "./types";

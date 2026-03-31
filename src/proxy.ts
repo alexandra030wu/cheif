@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
   // Authenticated users on auth pages → /kitchen
   if (user && isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/kitchen";
+    url.pathname = "/chat";
     return NextResponse.redirect(url);
   }
 

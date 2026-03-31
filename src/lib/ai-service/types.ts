@@ -88,11 +88,27 @@ export const IngredientInfoSchema = z.object({
 
 export type IngredientInfo = z.infer<typeof IngredientInfoSchema>;
 
+// ---------- Chat domain ----------
+
+export interface ChatRecipeInput {
+  message: string;
+  ingredients: string[];
+  timeOfDay: "morning" | "noon" | "evening" | "latenight";
+}
+
+export const ChatResponseSchema = z.object({
+  reply: z.string(),
+  recipes: z.array(RecipeSchema),
+});
+
+export type ChatResponse = z.infer<typeof ChatResponseSchema>;
+
 // ---------- Service interface ----------
 
 export interface AIService {
   generateRecipe(input: RecipeGenerationInput): Promise<Recipe>;
   streamRecipe(input: RecipeGenerationInput): Promise<ReadableStream<string>>;
   analyzeIngredient(input: IngredientAnalysisInput): Promise<IngredientInfo>;
+  generateChatRecipes(input: ChatRecipeInput): Promise<ChatResponse>;
   getProvider(): AIProviderID;
 }
