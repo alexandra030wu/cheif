@@ -4,12 +4,49 @@ import { ChatInterface } from "./_components/chat-interface";
 
 async function ChatLoader() {
   const supabase = await createClient();
-  const { data: ingredients } = await supabase
-    .from("ingredients")
-    .select("id, name, category, quantity, unit")
-    .order("name", { ascending: true });
 
-  return <ChatInterface ingredients={ingredients ?? []} />;
+  const [{ data: ingredients }, { data: { user } }] = await Promise.all([
+    supabase
+      .from("ingredients")
+      .select("id, name, category, quantity, unit")
+      .order("name", { ascending: true }),
+    supabase.auth.getUser(),
+  ]);
+
+  let preferences: {
+    dietary_preferences?: string[];
+    allergies?: string[];
+    cooking_level?: string;
+    kitchen_equipment?: string[];
+    default_servings?: string;
+  } | undefined;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("dietary_preferences, allergies, cooking_level, kitchen_equipment, default_servings")
+      .eq("id", user.id)
+      .single();
+
+    if (profile) {
+      preferences = {
+        dietary_preferences: Array.isArray(profile.dietary_preferences)
+          ? (profile.dietary_preferences as string[])
+          : undefined,
+        allergies: profile.allergies ?? undefined,
+        cooking_level: profile.cooking_level ?? undefined,
+        kitchen_equipment: profile.kitchen_equipment ?? undefined,
+        default_servings: profile.default_servings ?? undefined,
+      };
+    }
+  }
+
+  return (
+    <ChatInterface
+      ingredients={ingredients ?? []}
+      userPreferences={preferences}
+    />
+  );
 }
 
 function ChatSkeleton() {

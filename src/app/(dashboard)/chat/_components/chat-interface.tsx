@@ -17,8 +17,17 @@ interface Ingredient {
   unit: string | null;
 }
 
+interface UserPreferences {
+  dietary_preferences?: string[];
+  allergies?: string[];
+  cooking_level?: string;
+  kitchen_equipment?: string[];
+  default_servings?: string;
+}
+
 interface Props {
   ingredients: Ingredient[];
+  userPreferences?: UserPreferences;
 }
 
 function getTimeOfDay(): TimeOfDay {
@@ -34,7 +43,7 @@ function nextId() {
   return `msg-${++msgId}`;
 }
 
-export function ChatInterface({ ingredients }: Props) {
+export function ChatInterface({ ingredients, userPreferences }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +87,7 @@ export function ChatInterface({ ingredients }: Props) {
             message: text.trim(),
             ingredients: ingredientNames,
             timeOfDay: getTimeOfDay(),
+            preferences: userPreferences,
           }),
         });
 
@@ -112,7 +122,7 @@ export function ChatInterface({ ingredients }: Props) {
         scrollToBottom();
       }
     },
-    [ingredientNames, isLoading, scrollToBottom]
+    [ingredientNames, isLoading, scrollToBottom, userPreferences]
   );
 
   const handleSend = useCallback(() => {

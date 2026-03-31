@@ -94,6 +94,13 @@ export interface ChatRecipeInput {
   message: string;
   ingredients: string[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
+  preferences?: {
+    dietary_preferences?: string[];
+    allergies?: string[];
+    cooking_level?: string;
+    kitchen_equipment?: string[];
+    default_servings?: string;
+  };
 }
 
 export const ChatResponseSchema = z.object({

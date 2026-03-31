@@ -125,6 +125,12 @@ export interface Database {
           avatar_url: string | null;
           dietary_restrictions: string[] | null;
           preferred_cuisine: string[] | null;
+          nickname: string | null;
+          dietary_preferences: Json | null;
+          allergies: string[] | null;
+          cooking_level: string | null;
+          kitchen_equipment: string[] | null;
+          default_servings: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -134,6 +140,12 @@ export interface Database {
           avatar_url?: string | null;
           dietary_restrictions?: string[] | null;
           preferred_cuisine?: string[] | null;
+          nickname?: string | null;
+          dietary_preferences?: Json | null;
+          allergies?: string[] | null;
+          cooking_level?: string | null;
+          kitchen_equipment?: string[] | null;
+          default_servings?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -142,6 +154,12 @@ export interface Database {
           avatar_url?: string | null;
           dietary_restrictions?: string[] | null;
           preferred_cuisine?: string[] | null;
+          nickname?: string | null;
+          dietary_preferences?: Json | null;
+          allergies?: string[] | null;
+          cooking_level?: string | null;
+          kitchen_equipment?: string[] | null;
+          default_servings?: string | null;
           updated_at?: string;
         };
         Relationships: [];
