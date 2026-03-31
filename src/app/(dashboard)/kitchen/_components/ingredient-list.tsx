@@ -24,7 +24,21 @@ export async function IngredientList() {
     );
   }
 
-  const items = ingredients.map((item) => ({
+  // Sort: expired first, then by expiry date ascending, no-expiry last
+  const now = Date.now();
+  const sorted = [...ingredients].sort((a, b) => {
+    const aTime = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+    const bTime = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+    // Both have expiry: sort ascending (most urgent first)
+    if (aTime !== Infinity && bTime !== Infinity) return aTime - bTime;
+    // One has expiry, the other doesn't: expiry first
+    if (aTime !== Infinity) return -1;
+    if (bTime !== Infinity) return 1;
+    // Neither has expiry: keep original order
+    return 0;
+  });
+
+  const items = sorted.map((item) => ({
     id: item.id,
     name: item.name,
     category: item.category,
@@ -33,5 +47,9 @@ export async function IngredientList() {
     expiry_date: item.expiry_date,
   }));
 
-  return <IngredientListClient ingredients={items} />;
+  const expiredCount = ingredients.filter(
+    (i) => i.expiry_date && new Date(i.expiry_date).getTime() < now
+  ).length;
+
+  return <IngredientListClient ingredients={items} expiredCount={expiredCount} />;
 }

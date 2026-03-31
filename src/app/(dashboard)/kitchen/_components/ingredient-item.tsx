@@ -44,11 +44,13 @@ export const IngredientItem = memo(function IngredientItem({
   expiry_date,
   onTap,
 }: Props) {
-  const isExpired = expiry_date ? new Date(expiry_date) < new Date() : false;
-  const isExpiringSoon =
-    expiry_date && !isExpired
-      ? new Date(expiry_date) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-      : false;
+  const now = Date.now();
+  const expiryTime = expiry_date ? new Date(expiry_date).getTime() : null;
+  const isExpired = expiryTime !== null && expiryTime < now;
+  const isExpiring3d =
+    expiryTime !== null && !isExpired && expiryTime < now + 3 * 86400000;
+  const isExpiring7d =
+    expiryTime !== null && !isExpired && !isExpiring3d && expiryTime < now + 7 * 86400000;
 
   return (
     <div
@@ -56,7 +58,15 @@ export const IngredientItem = memo(function IngredientItem({
       tabIndex={onTap ? 0 : undefined}
       onClick={onTap}
       onKeyDown={onTap ? (e) => { if (e.key === "Enter") onTap(); } : undefined}
-      className={`flex items-center gap-3 md:gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-gray-200 transition-colors ${onTap ? "cursor-pointer active:bg-gray-50" : ""}`}
+      className={`flex items-center gap-3 md:gap-4 rounded-xl border bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-gray-200 transition-colors ${
+        isExpired
+          ? "border-red-200 bg-red-50/30"
+          : isExpiring3d
+          ? "border-amber-200 bg-amber-50/30"
+          : isExpiring7d
+          ? "border-yellow-200 bg-yellow-50/20"
+          : "border-gray-100"
+      } ${onTap ? "cursor-pointer active:bg-gray-50" : ""}`}
     >
       <span
         className={`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${
@@ -76,16 +86,17 @@ export const IngredientItem = memo(function IngredientItem({
 
       {expiry_date && (
         <span
-          className={`text-xs ${
+          className={`text-xs font-medium ${
             isExpired
               ? "text-red-500"
-              : isExpiringSoon
+              : isExpiring3d
               ? "text-amber-500"
-              : "text-gray-400"
+              : isExpiring7d
+              ? "text-yellow-600"
+              : "text-gray-400 font-normal"
           }`}
         >
-          {isExpired ? "已过期 " : ""}
-          {expiry_date}
+          {isExpired ? "已过期" : isExpiring3d ? "即将过期" : isExpiring7d ? "临期" : expiry_date}
         </span>
       )}
 

@@ -16,6 +16,7 @@ interface Ingredient {
   category: string;
   quantity: number | null;
   unit: string | null;
+  expiry_date: string | null;
 }
 
 interface UserPreferences {
@@ -54,6 +55,14 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
     [ingredients]
   );
 
+  const urgentIngredients = useMemo(() => {
+    const now = Date.now();
+    const sevenDays = 7 * 86400000;
+    return ingredients
+      .filter((i) => i.expiry_date && new Date(i.expiry_date).getTime() < now + sevenDays)
+      .map((i) => i.name);
+  }, [ingredients]);
+
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({
@@ -91,6 +100,7 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
           body: JSON.stringify({
             message: text.trim(),
             ingredients: ingredientNames,
+            urgentIngredients,
             timeOfDay: getTimeOfDay(),
             preferences: userPreferences,
           }),
@@ -117,7 +127,7 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
         scrollToBottom();
       }
     },
-    [ingredientNames, isLoading, scrollToBottom, userPreferences, addMessage]
+    [ingredientNames, urgentIngredients, isLoading, scrollToBottom, userPreferences, addMessage]
   );
 
   const handleSend = useCallback(() => {

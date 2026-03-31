@@ -25,6 +25,7 @@ export const RecipeCard = memo(function RecipeCard({ recipe, onTap }: Props) {
   const ingredientNames = recipe.ingredients.map((i) => i.name);
   const shown = ingredientNames.slice(0, 4);
   const remaining = ingredientNames.length - shown.length;
+  const usesUrgent = recipe.tags.includes("消耗临期食材");
 
   return (
     <button
@@ -56,6 +57,12 @@ export const RecipeCard = memo(function RecipeCard({ recipe, onTap }: Props) {
           <span>{recipe.cuisine}</span>
         )}
       </div>
+
+      {usesUrgent && (
+        <span className="inline-block rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium mb-2">
+          🔥 消耗临期食材
+        </span>
+      )}
 
       <p className="text-xs text-gray-500 leading-relaxed">
         {shown.join("、")}

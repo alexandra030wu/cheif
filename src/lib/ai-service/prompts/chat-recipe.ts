@@ -9,6 +9,7 @@ export interface UserPreferences {
 export interface ChatPromptInput {
   message: string;
   ingredients: string[];
+  urgentIngredients?: string[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
   preferences?: UserPreferences;
 }
@@ -63,15 +64,29 @@ export function buildChatRecipePrompt(input: ChatPromptInput): string {
     }
   }
 
+  const hasUrgent = input.urgentIngredients && input.urgentIngredients.length > 0;
+
   if (hasIngredients) {
     parts.push(
       `用户冰箱里有以下食材：${input.ingredients.join("、")}。`,
+    );
+
+    if (hasUrgent) {
+      parts.push(
+        "",
+        `⚠️ 其中以下食材即将过期或已临期，请优先使用：${input.urgentIngredients!.join("、")}。`,
+        "如果某道菜使用了临期食材，请在该菜谱的 tags 数组中加入「消耗临期食材」标签。",
+      );
+    }
+
+    parts.push(
       "",
       "请根据以上食材推荐 2-3 道菜。规则：",
       "1. 只从用户的食材库中选取，每道菜选取合理搭配的食材，不需要全部用上。",
       "2. 可以假设用户家中有基本调料（盐、酱油、醋、食用油等）。",
       `3. 按「${servings}」的份量设计用量。`,
       "4. 根据时段推荐合适的菜品（早餐、午餐、晚餐、夜宵）。",
+      hasUrgent ? "5. 尽量优先消耗临期食材。" : "",
     );
   } else {
     parts.push(

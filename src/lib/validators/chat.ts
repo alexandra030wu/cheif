@@ -3,6 +3,7 @@ import { z } from "zod";
 export const ChatRequestSchema = z.object({
   message: z.string().min(1),
   ingredients: z.array(z.string()),
+  urgentIngredients: z.array(z.string()).optional(),
   timeOfDay: z.enum(["morning", "noon", "evening", "latenight"]),
   preferences: z
     .object({

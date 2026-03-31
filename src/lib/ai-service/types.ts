@@ -93,6 +93,7 @@ export type IngredientInfo = z.infer<typeof IngredientInfoSchema>;
 export interface ChatRecipeInput {
   message: string;
   ingredients: string[];
+  urgentIngredients?: string[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
   preferences?: {
     dietary_preferences?: string[];

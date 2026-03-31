@@ -8,7 +8,7 @@ async function ChatLoader() {
   const [{ data: ingredients }, { data: { user } }] = await Promise.all([
     supabase
       .from("ingredients")
-      .select("id, name, category, quantity, unit")
+      .select("id, name, category, quantity, unit, expiry_date")
       .order("name", { ascending: true }),
     supabase.auth.getUser(),
   ]);
