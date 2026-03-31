@@ -81,7 +81,7 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
       <div className="flex-1 overflow-y-auto">
         {/* Cover image with overlaid header */}
         {recipe.coverImageUrl ? (
-          <div className="relative w-full aspect-[2/1] max-h-[300px]">
+          <div className="relative w-full h-48 md:h-[300px]">
             <img
               src={recipe.coverImageUrl}
               alt={recipe.title}
