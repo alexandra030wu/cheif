@@ -12,7 +12,10 @@ export async function generateAndStoreIcon(
   name: string
 ): Promise<void> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) {
+    console.warn("[icon-gen] GEMINI_API_KEY not set, skipping");
+    return;
+  }
 
   try {
     // 1. Generate image via Gemini Imagen
@@ -25,11 +28,17 @@ export async function generateAndStoreIcon(
       }),
     });
 
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.error("[icon-gen] Imagen API error:", res.status, await res.text().catch(() => ""));
+      return;
+    }
 
     const data = await res.json();
     const base64 = data?.predictions?.[0]?.bytesBase64Encoded;
-    if (!base64) return;
+    if (!base64) {
+      console.error("[icon-gen] No image data in response");
+      return;
+    }
 
     const buffer = Buffer.from(base64, "base64");
 
@@ -44,7 +53,10 @@ export async function generateAndStoreIcon(
         upsert: true,
       });
 
-    if (uploadError) return;
+    if (uploadError) {
+      console.error("[icon-gen] Storage upload error:", uploadError.message);
+      return;
+    }
 
     // 3. Build public URL and update ingredient
     const {
@@ -55,7 +67,7 @@ export async function generateAndStoreIcon(
       .from("ingredients")
       .update({ icon_url: publicUrl })
       .eq("id", ingredientId);
-  } catch {
-    // Silent failure — icon generation is best-effort
+  } catch (err) {
+    console.error("[icon-gen] Unexpected error:", err instanceof Error ? err.message : err);
   }
 }
