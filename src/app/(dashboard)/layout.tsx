@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "./_components/logout-button";
+import { MobileNav } from "./_components/mobile-nav";
 
 const navItems = [
   { href: "/kitchen", label: "食材库" },
@@ -25,7 +26,8 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-56 shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      {/* Desktop sidebar — hidden on mobile */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-gray-200 bg-white flex-col">
         <div className="px-6 py-5 border-b border-gray-100">
           <span className="text-lg font-bold tracking-tight text-gray-900">Cheif</span>
           <p className="text-xs text-gray-400 mt-0.5">智能厨房助手</p>
@@ -46,7 +48,12 @@ export default async function DashboardLayout({
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 min-w-0">{children}</main>
+
+      {/* Main content — extra bottom padding on mobile for tab bar */}
+      <main className="flex-1 min-w-0 pb-16 md:pb-0">{children}</main>
+
+      {/* Mobile bottom tab bar */}
+      <MobileNav />
     </div>
   );
 }

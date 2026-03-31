@@ -96,7 +96,7 @@ export function RecipeGenerator({ ingredients }: Props) {
       <button
         onClick={generate}
         disabled={streaming}
-        className="w-full rounded-xl bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-xl bg-gray-900 py-3.5 md:py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {streaming ? "正在生成菜谱…" : "根据我的食材生成菜谱"}
       </button>
@@ -110,11 +110,11 @@ export function RecipeGenerator({ ingredients }: Props) {
 
       {/* Streamed output */}
       {(content || streaming) && (
-        <div className="rounded-xl border border-gray-100 bg-white p-6">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 md:p-6">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">
             AI 生成结果
           </p>
-          <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
+          <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed break-words">
             {content}
             {streaming && (
               <span className="inline-block w-1.5 h-4 bg-gray-400 ml-0.5 animate-pulse align-middle" />

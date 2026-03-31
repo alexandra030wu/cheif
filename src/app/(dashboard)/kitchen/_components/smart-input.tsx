@@ -27,7 +27,7 @@ interface ParsedItem {
 type Status = "idle" | "listening" | "parsing" | "parsed" | "saving";
 
 const inputClass =
-  "w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none transition-colors";
+  "w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 md:px-2 md:py-1.5 text-base md:text-sm text-gray-900 focus:border-gray-400 focus:outline-none transition-colors";
 
 export function SmartInput() {
   const router = useRouter();
@@ -217,7 +217,7 @@ export function SmartInput() {
           type="button"
           onClick={handleParse}
           disabled={!text.trim() || isBusy}
-          className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="w-full rounded-lg bg-gray-900 px-4 py-3 md:py-2 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 transition-colors"
         >
           {status === "parsing" ? "解析中…" : "✨ 智能解析"}
         </button>
@@ -242,7 +242,69 @@ export function SmartInput() {
             </button>
           </div>
 
-          <div className="rounded-lg border border-gray-100 overflow-hidden">
+          {/* Mobile: card layout */}
+          <div className="space-y-3 md:hidden">
+            {items.map((item, i) => (
+              <div key={i} className="rounded-lg border border-gray-100 bg-white p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <input
+                    value={item.name}
+                    onChange={(e) => updateItem(i, "name", e.target.value)}
+                    placeholder="名称"
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeItem(i)}
+                    className="shrink-0 ml-2 p-2 text-gray-300 hover:text-red-400 active:text-red-500 transition-colors"
+                    title="删除"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-0.5">数量</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={item.quantity ?? ""}
+                      onChange={(e) =>
+                        updateItem(i, "quantity", e.target.value ? Number(e.target.value) : undefined)
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-0.5">单位</label>
+                    <input
+                      value={item.unit ?? ""}
+                      onChange={(e) => updateItem(i, "unit", e.target.value || undefined)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-0.5">分类</label>
+                    <select
+                      value={item.category}
+                      onChange={(e) => updateItem(i, "category", e.target.value as Category)}
+                      className={inputClass}
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden md:block rounded-lg border border-gray-100 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
@@ -323,7 +385,7 @@ export function SmartInput() {
             type="button"
             onClick={handleSave}
             disabled={items.length === 0}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="w-full rounded-lg bg-gray-900 px-4 py-3 md:py-2 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 transition-colors"
           >
             保存全部 {items.length} 项食材
           </button>

@@ -17,7 +17,7 @@ const CATEGORIES = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-0 transition-colors";
+  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 md:py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-0 transition-colors";
 
 const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
@@ -114,14 +114,14 @@ export function AddIngredientForm() {
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          className="flex-1 rounded-lg bg-gray-900 px-4 py-3 md:py-2 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 transition-colors"
         >
           {pending ? "保存中…" : "保存食材"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          className="rounded-lg border border-gray-200 px-4 py-3 md:py-2 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
         >
           取消
         </button>

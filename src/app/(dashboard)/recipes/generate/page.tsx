@@ -9,7 +9,7 @@ export default async function GenerateRecipePage() {
     .order("name", { ascending: true });
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="px-4 py-6 md:p-8 md:max-w-2xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">AI 菜谱生成</h1>
         <p className="text-sm text-gray-400 mt-1">

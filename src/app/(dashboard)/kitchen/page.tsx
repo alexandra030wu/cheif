@@ -32,7 +32,7 @@ export default async function KitchenPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="px-4 py-6 md:p-8 max-w-3xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -43,7 +43,7 @@ export default async function KitchenPage() {
         </div>
         <Link
           href="/kitchen/add"
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
+          className="rounded-lg bg-gray-900 px-4 py-2.5 md:py-2 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 transition-colors"
         >
           + 添加食材
         </Link>
@@ -77,7 +77,7 @@ export default async function KitchenPage() {
             return (
               <div
                 key={item.id}
-                className="flex items-center gap-4 rounded-xl border border-gray-100 bg-white px-5 py-4 hover:border-gray-200 transition-colors"
+                className="flex items-center gap-3 md:gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3.5 md:px-5 md:py-4 hover:border-gray-200 transition-colors"
               >
                 {/* Category badge */}
                 <span
