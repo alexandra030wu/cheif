@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Recipe } from "@/lib/ai-service";
+import { CookingMode } from "./cooking-mode";
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: "简单",
@@ -18,6 +19,7 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [cooking, setCooking] = useState(false);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -33,6 +35,7 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
   useEffect(() => {
     setSaved(false);
     setSaveError("");
+    setCooking(false);
   }, [recipe]);
 
   if (!recipe) return null;
@@ -222,10 +225,10 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
         <div className="flex gap-3 max-w-2xl mx-auto">
           <button
             type="button"
-            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-400 cursor-default"
-            disabled
+            onClick={() => setCooking(true)}
+            className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           >
-            开始制作（敬请期待）
+            开始制作
           </button>
           <button
             type="button"
@@ -242,6 +245,11 @@ export function RecipeDetailSheet({ recipe, onClose }: Props) {
         </div>
         <div className="h-[env(safe-area-inset-bottom)]" />
       </div>
+
+      {/* Cooking Mode overlay */}
+      {cooking && (
+        <CookingMode recipe={recipe} onClose={() => setCooking(false)} />
+      )}
     </div>
   );
 }
