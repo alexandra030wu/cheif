@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Recipe, ChatResponse } from "@/lib/ai-service";
+import { useChatStore } from "@/stores/chat-store";
 import { PromptCards } from "./prompt-cards";
-import { MessageBubble, type ChatMessage } from "./message-bubble";
+import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { RecipeDetailSheet } from "./recipe-detail-sheet";
 
@@ -38,13 +39,11 @@ function getTimeOfDay(): TimeOfDay {
   return "latenight";
 }
 
-let msgId = 0;
-function nextId() {
-  return `msg-${++msgId}`;
-}
-
 export function ChatInterface({ ingredients, userPreferences }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messages = useChatStore((s) => s.messages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const clearMessages = useChatStore((s) => s.clearMessages);
+
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -64,17 +63,23 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
     });
   }, []);
 
+  // Scroll to bottom when messages change (including restore from localStorage)
+  useEffect(() => {
+    if (messages.length > 0) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: "instant",
+        });
+      });
+    }
+  }, [messages.length]);
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
 
-      const userMsg: ChatMessage = {
-        id: nextId(),
-        role: "user",
-        content: text.trim(),
-      };
-
-      setMessages((prev) => [...prev, userMsg]);
+      addMessage({ role: "user", content: text.trim() });
       setInputValue("");
       setIsLoading(true);
       scrollToBottom();
@@ -95,34 +100,24 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
           const data = await res.json().catch(() => ({}));
           const errText =
             typeof data?.error === "string" ? data.error : "生成失败，请重试";
-          setMessages((prev) => [
-            ...prev,
-            { id: nextId(), role: "assistant", content: errText },
-          ]);
+          addMessage({ role: "assistant", content: errText });
           return;
         }
 
         const data = (await res.json()) as ChatResponse;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: nextId(),
-            role: "assistant",
-            content: data.reply,
-            recipes: data.recipes,
-          },
-        ]);
+        addMessage({
+          role: "assistant",
+          content: data.reply,
+          recipes: data.recipes,
+        });
       } catch {
-        setMessages((prev) => [
-          ...prev,
-          { id: nextId(), role: "assistant", content: "网络错误，请重试" },
-        ]);
+        addMessage({ role: "assistant", content: "网络错误，请重试" });
       } finally {
         setIsLoading(false);
         scrollToBottom();
       }
     },
-    [ingredientNames, isLoading, scrollToBottom, userPreferences]
+    [ingredientNames, isLoading, scrollToBottom, userPreferences, addMessage]
   );
 
   const handleSend = useCallback(() => {
@@ -145,10 +140,19 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
   return (
     <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))]">
       {/* Header */}
-      <header className="shrink-0 flex items-center justify-center py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12">
+      <header className="shrink-0 flex items-center justify-between py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12 pr-3">
         <span className="text-base font-bold text-gray-900">
           🍳 Cheif
         </span>
+        {!isEmpty && (
+          <button
+            type="button"
+            onClick={clearMessages}
+            className="rounded-lg px-2.5 py-1.5 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+          >
+            清空对话
+          </button>
+        )}
       </header>
 
       {/* Messages area */}

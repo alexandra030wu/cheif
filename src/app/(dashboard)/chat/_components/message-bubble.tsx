@@ -2,14 +2,10 @@
 
 import { memo } from "react";
 import type { Recipe } from "@/lib/ai-service";
+import type { ChatMessage } from "@/stores/chat-store";
 import { RecipeCard } from "./recipe-card";
 
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  recipes?: Recipe[];
-}
+export type { ChatMessage };
 
 interface Props {
   message: ChatMessage;
