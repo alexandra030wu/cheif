@@ -68,31 +68,47 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <span className="text-sm font-medium text-gray-900">菜谱详情</span>
-        <div className="w-8" />
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Cover image */}
-        {recipe.coverImageUrl && (
-          <div className="w-full aspect-[2/1] max-h-56">
+        {/* Cover image with overlaid header */}
+        {recipe.coverImageUrl ? (
+          <div className="relative w-full aspect-[2/1] max-h-[300px]">
             <img
               src={recipe.coverImageUrl}
               alt={recipe.title}
               className="w-full h-full object-cover"
             />
+            {/* Gradient overlay for header readability */}
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent" />
+            {/* Header overlaid on image */}
+            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 py-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg p-1.5 text-white/90 hover:bg-white/20 active:bg-white/30 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 drop-shadow">
+                  <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <span className="text-sm font-medium text-white drop-shadow">菜谱详情</span>
+              <div className="w-8" />
+            </div>
+          </div>
+        ) : (
+          /* Header without image */
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <span className="text-sm font-medium text-gray-900">菜谱详情</span>
+            <div className="w-8" />
           </div>
         )}
 
