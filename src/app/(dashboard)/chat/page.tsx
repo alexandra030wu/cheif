@@ -14,7 +14,7 @@ async function ChatLoader() {
 
 function ChatSkeleton() {
   return (
-    <div className="flex flex-col h-screen animate-pulse">
+    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] animate-pulse">
       <div className="shrink-0 flex items-center justify-center py-3 border-b border-gray-100">
         <div className="h-5 w-20 bg-gray-200 rounded" />
       </div>

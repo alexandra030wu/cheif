@@ -66,7 +66,7 @@ export function HamburgerMenu({ userEmail }: Props) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed top-[calc(0.75rem+env(safe-area-inset-top))] left-3 z-40 rounded-lg p-2 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
+        className="fixed top-[calc(0.75rem+env(safe-area-inset-top,0px))] left-3 z-40 rounded-lg p-2 text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors bg-white/80 backdrop-blur-sm shadow-sm"
         aria-label="打开菜单"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
