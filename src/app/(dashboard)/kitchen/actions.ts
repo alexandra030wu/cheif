@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { IngredientFormSchema } from "@/lib/validators/ingredient";
+import { generateAndStoreIcon } from "@/lib/icon-generation";
 
 async function getAuthUserId() {
   const supabase = await createClient();
@@ -42,12 +43,16 @@ export async function addIngredient(
   }
 
   const { supabase, userId } = await getAuthUserId();
-  const { error } = await supabase.from("ingredients").insert({
-    ...parsed.data,
-    user_id: userId,
-  });
+  const { data: inserted, error } = await supabase
+    .from("ingredients")
+    .insert({ ...parsed.data, user_id: userId })
+    .select("id, name")
+    .single();
 
   if (error) return { status: "error", message: error.message };
+
+  // Fire-and-forget icon generation
+  if (inserted) void generateAndStoreIcon(inserted.id, inserted.name);
 
   revalidateIngredients();
   return { status: "success" };
@@ -115,8 +120,18 @@ export async function bulkAddIngredients(
     return { status: "error", message: "没有合法的食材数据" };
   }
 
-  const { error } = await supabase.from("ingredients").insert(rows);
+  const { data: inserted, error } = await supabase
+    .from("ingredients")
+    .insert(rows)
+    .select("id, name");
   if (error) return { status: "error", message: error.message };
+
+  // Fire-and-forget icon generation for each
+  if (inserted) {
+    for (const row of inserted) {
+      void generateAndStoreIcon(row.id, row.name);
+    }
+  }
 
   revalidateIngredients();
   return { status: "success", count: rows.length };

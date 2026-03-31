@@ -26,6 +26,7 @@ export interface EditableIngredient {
   quantity: number | null;
   unit: string | null;
   expiry_date: string | null;
+  icon_url: string | null;
 }
 
 interface Props {

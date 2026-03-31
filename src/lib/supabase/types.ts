@@ -22,6 +22,7 @@ export interface Database {
           unit: string | null;
           expiry_date: string | null;
           notes: string | null;
+          icon_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -34,6 +35,7 @@ export interface Database {
           unit?: string | null;
           expiry_date?: string | null;
           notes?: string | null;
+          icon_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -46,6 +48,7 @@ export interface Database {
           unit?: string | null;
           expiry_date?: string | null;
           notes?: string | null;
+          icon_url?: string | null;
           updated_at?: string;
         };
         Relationships: [];

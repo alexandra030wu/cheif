@@ -95,9 +95,9 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
         ))}
       </div>
 
-      {/* List */}
+      {/* Grid */}
       {filtered.length > 0 ? (
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
           {filtered.map((item) => (
             <IngredientItem
               key={item.id}
@@ -107,6 +107,7 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
               quantity={item.quantity}
               unit={item.unit}
               expiry_date={item.expiry_date}
+              icon_url={item.icon_url}
               onTap={() => setEditing(item)}
             />
           ))}

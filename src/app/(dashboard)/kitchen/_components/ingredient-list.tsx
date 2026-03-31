@@ -45,6 +45,7 @@ export async function IngredientList() {
     quantity: item.quantity,
     unit: item.unit,
     expiry_date: item.expiry_date,
+    icon_url: item.icon_url,
   }));
 
   const expiredCount = ingredients.filter(

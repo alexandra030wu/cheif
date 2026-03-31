@@ -10,17 +10,21 @@ export default function KitchenLoading() {
         <div className="h-9 w-24 bg-gray-200 rounded-lg" />
       </div>
 
-      {/* List skeleton */}
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 md:gap-4 rounded-xl border border-gray-100 bg-white px-4 py-3.5 md:px-5 md:py-4"
-          >
-            <div className="h-5 w-12 bg-gray-100 rounded-md shrink-0" />
-            <div className="h-4 flex-1 bg-gray-100 rounded" style={{ maxWidth: `${120 + i * 20}px` }} />
-            <div className="h-4 w-14 bg-gray-50 rounded" />
-            <div className="h-4 w-20 bg-gray-50 rounded" />
+      {/* Search skeleton */}
+      <div className="h-10 bg-gray-100 rounded-xl mb-3" />
+      <div className="flex gap-1.5 mb-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-7 bg-gray-100 rounded-full" style={{ width: `${48 + i * 8}px` }} />
+        ))}
+      </div>
+
+      {/* Grid skeleton */}
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-gray-100 bg-white p-3 flex flex-col items-center">
+            <div className="w-14 h-14 bg-gray-100 rounded-lg mb-2" />
+            <div className="h-3 w-12 bg-gray-100 rounded" />
+            <div className="h-2.5 w-8 bg-gray-50 rounded mt-1" />
           </div>
         ))}
       </div>
