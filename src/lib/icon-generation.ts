@@ -74,19 +74,22 @@ export async function generateAndStoreIcon(
 }
 
 /**
- * Generate a cover image for a recipe and store it in Supabase Storage.
- * Returns the public URL, or null on failure.
+ * Generate a cover image for a recipe, store it in Supabase Storage,
+ * and update the recipe row with the cover URL. Fully self-contained.
  */
-export async function generateRecipeCover(
+export async function generateAndStoreCover(
   recipeId: string,
   dishName: string
-): Promise<string | null> {
+): Promise<void> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("[cover-gen] GEMINI_API_KEY not set, skipping");
+    return;
+  }
 
   try {
     const buffer = await generateImage(apiKey, buildCoverPrompt(dishName), "1:1");
-    if (!buffer) return null;
+    if (!buffer) return;
 
     const admin = createAdminClient();
     const filePath = `${recipeId}.png`;
@@ -97,13 +100,18 @@ export async function generateRecipeCover(
 
     if (uploadError) {
       console.error("[cover-gen] Storage upload error:", uploadError.message);
-      return null;
+      return;
     }
 
     const { data: { publicUrl } } = admin.storage.from("recipe-covers").getPublicUrl(filePath);
-    return publicUrl;
+
+    await admin
+      .from("recipes")
+      .update({ cover_image_url: publicUrl })
+      .eq("id", recipeId);
+
+    console.log("[cover-gen] OK:", dishName, "->", publicUrl);
   } catch (err) {
     console.error("[cover-gen] Unexpected error:", err instanceof Error ? err.message : err);
-    return null;
   }
 }
