@@ -4,7 +4,7 @@ const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict";
 
 function buildPrompt(name: string): string {
-  return `A flat minimal food icon of ${name}, white background, simple clean vector style, centered, no text, no shadow, 128x128 pixels`;
+  return `A realistic food icon of exactly ${name}, on a pure white background, centered, no text, no shadow, product photography style, high definition`;
 }
 
 export async function generateAndStoreIcon(
