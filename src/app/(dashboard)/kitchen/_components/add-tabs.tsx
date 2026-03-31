@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { AddIngredientForm } from "./add-form";
-import { SmartInput } from "./smart-input";
+
+const SmartInput = lazy(() =>
+  import("./smart-input").then((m) => ({ default: m.SmartInput }))
+);
 
 type Tab = "manual" | "smart";
 
@@ -34,7 +37,21 @@ export function AddTabs() {
         ))}
       </div>
 
-      {active === "manual" ? <AddIngredientForm /> : <SmartInput />}
+      {active === "manual" ? (
+        <AddIngredientForm />
+      ) : (
+        <Suspense
+          fallback={
+            <div className="animate-pulse space-y-4 py-2">
+              <div className="h-4 w-24 bg-gray-100 rounded" />
+              <div className="h-24 bg-gray-100 rounded-lg" />
+              <div className="h-10 bg-gray-200 rounded-lg" />
+            </div>
+          }
+        >
+          <SmartInput />
+        </Suspense>
+      )}
     </div>
   );
 }

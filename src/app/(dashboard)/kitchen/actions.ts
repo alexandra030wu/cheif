@@ -13,6 +13,11 @@ async function getAuthUserId() {
   return { supabase, userId: user.id };
 }
 
+function revalidateIngredients() {
+  revalidatePath("/kitchen");
+  revalidatePath("/recipes/generate");
+}
+
 export type AddIngredientState =
   | { status: "idle" }
   | { status: "success" }
@@ -44,14 +49,14 @@ export async function addIngredient(
 
   if (error) return { status: "error", message: error.message };
 
-  revalidatePath("/kitchen");
+  revalidateIngredients();
   return { status: "success" };
 }
 
 export async function deleteIngredient(id: string) {
   const { supabase } = await getAuthUserId();
   await supabase.from("ingredients").delete().eq("id", id);
-  revalidatePath("/kitchen");
+  revalidateIngredients();
 }
 
 export type BulkAddResult =
@@ -82,6 +87,6 @@ export async function bulkAddIngredients(
   const { error } = await supabase.from("ingredients").insert(rows);
   if (error) return { status: "error", message: error.message };
 
-  revalidatePath("/kitchen");
+  revalidateIngredients();
   return { status: "success", count: rows.length };
 }

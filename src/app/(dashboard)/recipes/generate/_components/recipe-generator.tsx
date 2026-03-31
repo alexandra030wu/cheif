@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 
 interface Ingredient {
   id: string;
@@ -14,12 +14,39 @@ interface Props {
   ingredients: Ingredient[];
 }
 
+const IngredientTag = memo(function IngredientTag({
+  name,
+  quantity,
+  unit,
+}: {
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+}) {
+  return (
+    <span className="rounded-md bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
+      {name}
+      {quantity != null && (
+        <span className="text-gray-400 ml-1">
+          {quantity}
+          {unit ?? ""}
+        </span>
+      )}
+    </span>
+  );
+});
+
 export function RecipeGenerator({ ingredients }: Props) {
   const [streaming, setStreaming] = useState(false);
   const [content, setContent] = useState("");
   const [error, setError] = useState("");
 
-  async function generate() {
+  const ingredientNames = useMemo(
+    () => ingredients.map((i) => i.name),
+    [ingredients]
+  );
+
+  const generate = useCallback(async function generate() {
     setStreaming(true);
     setContent("");
     setError("");
@@ -28,9 +55,7 @@ export function RecipeGenerator({ ingredients }: Props) {
       const res = await fetch("/api/recipes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ingredients: ingredients.map((i) => i.name),
-        }),
+        body: JSON.stringify({ ingredients: ingredientNames }),
       });
 
       if (!res.ok) {
@@ -56,7 +81,7 @@ export function RecipeGenerator({ ingredients }: Props) {
     } finally {
       setStreaming(false);
     }
-  }
+  }, [ingredientNames]);
 
   if (ingredients.length === 0) {
     return (
@@ -76,18 +101,12 @@ export function RecipeGenerator({ ingredients }: Props) {
         </p>
         <div className="flex flex-wrap gap-2">
           {ingredients.map((item) => (
-            <span
+            <IngredientTag
               key={item.id}
-              className="rounded-md bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
-            >
-              {item.name}
-              {item.quantity != null && (
-                <span className="text-gray-400 ml-1">
-                  {item.quantity}
-                  {item.unit ?? ""}
-                </span>
-              )}
-            </span>
+              name={item.name}
+              quantity={item.quantity}
+              unit={item.unit}
+            />
           ))}
         </div>
       </div>
