@@ -1,6 +1,6 @@
 # Cheif — 智能厨房助手 PRD
 
-> 最后更新：2026-04-01
+> 最后更新：2026-04-02
 
 ---
 
@@ -92,13 +92,32 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 通用提示词：「惊喜菜谱」「HOT 热门菜」「健身餐」「快手10分钟」
 - 点击自动作为用户消息发送
 
-#### AI 菜谱响应
+#### AI 菜谱响应（蛋厨 Prompt 系统）
 
 - `generateObject` + `ChatResponseSchema`（reply 文本 + recipes 数组）
-- 返回 2-3 道结构化菜谱卡片
+- **蛋厨人设（dan.chef）**：温暖有个性的烹饪助手，说话自然、有趣、偶尔调皮
+- 返回 2-3 道结构化菜谱卡片，风格差异化（快手 + 稍复杂 + 创意）
 - 每张卡片：封面图（AI 生成或渐变占位）、菜名、时间、难度 badge、食材摘要
 - 临期食材标签：使用了临期食材的菜谱显示「🔥 消耗临期食材」徽章
-- AI 自动读取用户食材库、偏好（饮食限制/过敏原/厨艺/厨具/默认人份）、临期食材
+
+**Prompt 注入内容：**
+- 用户画像：昵称、厨艺水平、默认份数、饮食偏好、过敏原、常用厨具
+- 食材列表：带数量/单位/过期状态标记（🔴🟠🟡），按过期紧急度排序，上限 30 种
+- 口味画像：从 `taste_profile` 注入偏好/不喜欢的菜、菜系、食材、口味、风格
+- 时段感知：早晨/中午/傍晚/深夜
+
+**菜谱质量约束：**
+- 食材用量精确到数值+单位，禁止"适量""少许"
+- 每步有 `durationSeconds`（秒级计时）和感官指标描述
+- 火候标注（大火爆炒/中小火焖煮/小火慢熬）
+- 营养估算（calories/proteinG/carbsG/fatG）
+- 新手模式（≤8步/≤10种食材/每步tip小贴士）
+
+**对话智能：**
+- 模糊请求 → 追问1个关键问题 + 同时给推荐
+- 情绪感知 → 累了→快手菜，开心→仪式感，健身→高蛋白
+- 非烹饪话题 → 友善引导回烹饪场景
+- few-shot 示例（番茄炒蛋 + 红烧排骨）嵌入 prompt
 
 #### 对话持久化
 
@@ -113,7 +132,7 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **封面图**：顶部全宽展示（移动端 h-48，桌面端 h-300px，object-cover）
 - **透明导航栏**：有封面图时叠在图片上方，白色文字 + 渐变遮罩；无封面图保留白色导航
 - **动态 theme-color**：打开时改为 #000000 融入封面图，关闭时恢复
-- **内容区**：标题、描述、菜系/份数/时间/难度、标签、完整食材清单、分步骤说明、营养估算
+- **内容区**：标题、描述、菜系/份数/时间/难度、标签、完整食材清单、分步骤说明（含💡小贴士）、营养估算（千卡/蛋白质g/碳水g/脂肪g）
 - **底部操作栏**：「开始制作」（进入 Cooking Mode）+「收藏」按钮（成功后变绿色禁用态）
 
 ### 3.4 Cooking Mode（沉浸式做菜模式）
@@ -122,9 +141,9 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 
 - **全屏深色界面**（`bg-gray-950`），z-index 60
 - **进度条**：顶部白色进度条 + 当前步/总步数
-- **步骤展示**：每步占满屏，圆形步骤编号 + 大字指令居中
+- **步骤展示**：每步占满屏，圆形步骤编号 + 大字指令居中 + 💡小贴士（如有）
 - **左右滑动 / 箭头按钮**切换上一步/下一步
-- **计时器**：步骤有 `durationMinutes` 时自动显示倒计时按钮，支持开始/暂停/重置
+- **计时器**：步骤有 `durationSeconds` 时自动显示倒计时按钮，支持开始/暂停/重置
 - **语音朗读**：Web Speech Synthesis API，切换步骤自动中文朗读，计时结束语音提醒
 - **完成烹饪**：最后一步显示「完成烹饪」全宽按钮，返回详情页
 - **移动端优先**：大触摸区域（`py-4` 按钮），适合湿手操作
@@ -134,6 +153,15 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 **路由：** `/recipes`
 
 - 收藏菜谱列表：左图右文横向卡片布局，封面缩略图/渐变占位 + 菜名/难度/时间/食材
+- **搜索**：实时关键字过滤（标题+描述），带清除按钮
+- **多维度筛选 Chip 标签栏**：
+  - 菜系（动态从已收藏食谱提取，单选）
+  - 难度（简单/中等/困难，单选）
+  - 时间预设（15分钟内/30分钟内/1小时内，单选）
+  - 标签（动态提取，多选 OR 逻辑）
+  - 多维度之间 AND 叠加，搜索+筛选可组合
+- 结果计数："找到 N 道食谱" / "共 N 道收藏菜谱"
+- 无结果空状态 + "清除所有筛选"按钮
 - 点击卡片打开详情 Sheet（复用聊天页组件，`alreadySaved` 模式）
 - 支持删除收藏（`deleteSavedRecipe` Server Action，同时删除 recipes + saved_recipes 记录）
 - 空状态引导去聊天页生成菜谱
@@ -159,13 +187,20 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **保质期排序**：默认按保质期升序，最紧急排最前，无保质期排最后
 - **三级过期标记**：已过期（红色边框）、3 天内（橙色）、7 天内（黄色）
 - **过期横幅**：有过期食材时顶部显示「⚠️ 你有 N 个食材已过期，建议尽快处理」
-- **点击编辑**：底部 Sheet 编辑表单（名称、分类、数量、单位、保质期）
+- **点击查看详情**：底部 Sheet（90vh），包含：
+  - 大图展示（160×160 圆角卡片，AI 图标或 emoji 回退）
+  - 名称（大字）+ 分类·数量·过期状态色标（红/橙/黄/绿/灰）
+  - 详情字段（数量/分类/保质期），只读展示
+  - 编辑模式：点击「编辑」按钮切换为表单
+  - 删除功能：inline 确认弹窗（"确定要删除「番茄」吗？此操作不可撤销"），不删共享图标
 
-#### AI 食材图标
+#### AI 食材图标（共享图标库）
 
-- 添加食材时自动异步调用 Gemini Imagen 生成图标（fire-and-forget，不阻塞添加）
+- **全局共享库**：同名食材只生成一次图标，所有用户共享（节省 90%+ API 调用）
+- 添加食材时先查 `ingredient_icons` 表 → 命中直接用（0 API 调用） → 未命中生成并缓存
+- 食材名称标准化（`normalizeIngredientName`：去空格/括号/统一小写）用于去重
 - Prompt：`"A realistic food icon of exactly [名称], on a pure white background, centered, no text, no shadow, product photography style, high definition"`
-- 存储到 Supabase Storage `ingredient-icons` bucket，URL 写入 `icon_url`
+- 存储到 Supabase Storage `ingredient-icons` bucket，文件名用标准化食材名（如 `番茄.webp`）
 - 无图标时用分类 emoji 回退（🥬🍎🥩🧀🌾🧂🫙📦）
 
 #### 手动录入 (`/kitchen/add` → 手动录入 Tab)
@@ -201,6 +236,18 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **常用厨具**：多选（烤箱/空气炸锅/微波炉/电饭煲/面包机/搅拌机/蒸锅）
 - 保存到 Supabase `profiles` 表（upsert）
 - AI 菜谱生成时自动读取偏好并注入 prompt
+
+#### 口味画像（蛋厨对你的了解）
+
+- **被动学习**：每次对话后异步提取口味信号（用 cheap model：GPT-4o-mini / Claude Haiku）
+- **行为学习**：收藏菜谱时自动生成 like_dish(0.6) + like_cuisine(0.5) + like_ingredient(0.4) 信号
+- **主动设置**：Settings 页标签云 UI，支持手动添加/删除口味偏好
+- **信号类型**：like/dislike_dish、like/dislike_cuisine、like/dislike_ingredient、like/dislike_flavor、cooking_style、dietary_goal
+- **置信度分级**：显式表达=1.0、强烈暗示=0.8、收藏行为=0.4-0.6、推断=0.5
+- **聚合算法**：按 (出现次数 × 平均置信度) 排序，取 Top N 写入 `profiles.taste_profile`
+- **Prompt 注入**：偏好菜/菜系/食材/口味作为软约束，不喜欢的食材默认避免（过敏原=硬约束）
+- **展示**：Settings 页分类标签云（菜品/菜系/食材/口味/风格/目标），支持删除 + 清空
+- 学习进度显示："已学习 N 条信号"
 
 ### 3.10 PWA 支持
 
@@ -242,10 +289,38 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 | cooking_level | text | 厨艺水平（beginner/intermediate/expert） |
 | kitchen_equipment | text[] | 常用厨具 |
 | default_servings | text | 默认人份 |
+| taste_profile | jsonb | 口味画像（聚合后的偏好数据） |
 | created_at | timestamptz | 创建时间 |
 | updated_at | timestamptz | 更新时间 |
 
-### 4.2 ingredients
+### 4.2 taste_signals
+
+口味偏好原始信号日志，异步从对话和行为中提取。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uuid (PK) | 自动生成 |
+| user_id | uuid (FK → auth.users) | 所属用户，级联删除，NOT NULL |
+| signal_type | text | 信号类型（like_dish/dislike_ingredient/cooking_style 等），NOT NULL |
+| signal_value | text | 具体内容（如"红烧肉"、"辣"），NOT NULL |
+| confidence | float | 置信度 0-1（默认 0.7） |
+| source | text | 来源：chat/explicit/behavior（默认 chat） |
+| context | text | 原始对话片段（≤50字），用于溯源 |
+| created_at | timestamptz | 创建时间 |
+
+### 4.3 ingredient_icons
+
+共享食材图标库，同名食材只存一份图标。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uuid (PK) | 自动生成 |
+| name | text | 食材原始名称，NOT NULL |
+| name_normalized | text | 标准化名称（去空格/括号/小写），UNIQUE |
+| icon_url | text | Supabase Storage URL，NOT NULL |
+| created_at | timestamptz | 创建时间 |
+
+### 4.4 ingredients
 
 食材库存。
 
@@ -263,7 +338,7 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 | created_at | timestamptz | 创建时间 |
 | updated_at | timestamptz | 更新时间 |
 
-### 4.3 recipes
+### 4.5 recipes
 
 AI 生成的菜谱。
 
@@ -286,7 +361,7 @@ AI 生成的菜谱。
 | created_by | uuid (FK → auth.users) | 创建者 |
 | created_at | timestamptz | 创建时间 |
 
-### 4.4 saved_recipes
+### 4.6 saved_recipes
 
 用户收藏的菜谱。
 
@@ -297,7 +372,14 @@ AI 生成的菜谱。
 | recipe_id | uuid (FK → recipes) | 菜谱 ID，级联删除，NOT NULL |
 | saved_at | timestamptz | 收藏时间 |
 
-### 4.5 Supabase Storage Buckets
+### 4.8 待执行 Migrations
+
+| 文件 | 内容 |
+|------|------|
+| `00006_create_taste_signals.sql` | taste_signals 表 + RLS + profiles.taste_profile 字段 |
+| `00007_create_ingredient_icons.sql` | ingredient_icons 共享表 + 迁移现有图标数据 |
+
+### 4.9 Supabase Storage Buckets
 
 | Bucket | 公开 | 用途 |
 |--------|------|------|
@@ -316,23 +398,29 @@ AI 对话式菜谱推荐（主接口）。
 ```json
 {
   "message": "来点晚餐灵感",
-  "ingredients": ["鸡胸肉", "西红柿", "洋葱"],
-  "urgentIngredients": ["西红柿"],
+  "ingredients": [
+    { "name": "鸡胸肉", "quantity": 500, "unit": "克", "daysUntilExpiry": 3 },
+    { "name": "西红柿", "quantity": 3, "unit": "个", "daysUntilExpiry": 1 }
+  ],
   "timeOfDay": "evening",
   "preferences": {
+    "nickname": "铁蛋",
     "dietary_preferences": ["低碳水"],
     "allergies": ["花生"],
     "cooking_level": "intermediate",
     "kitchen_equipment": ["烤箱", "空气炸锅"],
     "default_servings": "2人食"
-  }
+  },
+  "tasteProfile": { "liked_dishes": ["红烧肉"], "..." : "..." }
 }
 ```
+
+注：`ingredients` 兼容旧版 `string[]` 格式（自动转换为对象），`tasteProfile` 可选。
 
 **响应：**
 ```json
 {
-  "reply": "根据你的食材，推荐这几道晚餐：",
+  "reply": "看到你的番茄快过期了，正好配鸡胸肉来几道～",
   "recipes": [
     {
       "title": "番茄鸡胸肉",
@@ -342,10 +430,10 @@ AI 对话式菜谱推荐（主接口）。
       "prepTimeMinutes": 10,
       "cookTimeMinutes": 20,
       "difficulty": "easy",
-      "ingredients": [{ "name": "鸡胸肉", "amount": "200", "unit": "克" }],
-      "steps": [{ "order": 1, "instruction": "...", "durationMinutes": 5 }],
-      "tags": ["消耗临期食材"],
-      "coverImageUrl": null
+      "ingredients": [{ "name": "鸡胸肉", "amount": "500g", "unit": "" }],
+      "steps": [{ "order": 1, "instruction": "...", "durationSeconds": 300, "tip": "..." }],
+      "nutritionEstimate": { "calories": 350, "proteinG": 40, "carbsG": 10, "fatG": 8 },
+      "tags": ["消耗临期食材"]
     }
   ]
 }
@@ -366,6 +454,20 @@ AI 智能解析自然语言中的食材信息。
 ### 5.5 `POST /api/recipes/analyze`
 
 分析单个食材的详细信息。
+
+### 5.6 `POST /api/taste/extract`
+
+异步提取对话中的口味偏好信号（由前端在每次对话后 fire-and-forget 调用）。
+
+**请求体：**
+```json
+{ "conversation": "用户: 我喜欢吃辣\n助手: 好的..." }
+```
+
+**响应：**
+```json
+{ "extracted": 2 }
+```
 
 ---
 
@@ -398,12 +500,24 @@ interface AIService {
 }
 ```
 
+### 口味学习模块
+
+```
+src/lib/taste/
+├── types.ts       # TasteProfile 接口 + TasteSignal Zod Schema + SignalType 枚举
+├── extract.ts     # extractTasteSignals() — 用 cheap model 从对话提取信号
+├── aggregate.ts   # aggregateTasteProfile() — 信号聚合 → profiles.taste_profile
+└── index.ts       # barrel export
+```
+
 ### 图像生成
 
 `src/lib/icon-generation.ts`：
 
-- `generateAndStoreIcon(ingredientId, name)` — 食材图标生成
+- `getOrCreateSharedIcon(ingredientId, name)` — 查共享库 → 命中返回 / 未命中生成+缓存
+- `generateAndStoreIcon(ingredientId, name)` — 旧接口，已重定向到共享库流程
 - `generateAndStoreCover(recipeId, dishName)` — 菜谱封面生成
+- `normalizeIngredientName(name)` — 食材名称标准化（去空格/括号/小写）
 - 共享 `generateImage()` 调用 Gemini Imagen 4.0 Fast API
 - 使用 `src/lib/supabase/admin.ts`（service role client）上传 Storage
 
@@ -413,9 +527,8 @@ interface AIService {
 
 ### 7.1 菜谱生成增强
 
-- 支持指定菜系、份数、难度、烹饪时间等参数
-- 自由备注输入
 - 生成结果改为流式结构化输出（当前为非流式 `generateObject`）
+- 口味画像同义词映射（"西红柿"→"番茄"）
 
 ### 7.2 食材管理增强
 
@@ -426,6 +539,12 @@ interface AIService {
 
 - 菜谱分享（公开/私密）
 - 浏览其他用户的公开菜谱（RLS 已支持认证用户可读所有菜谱）
+
+### 7.4 口味学习增强
+
+- 批量聚合（信号量 >100 时改为定时聚合）
+- 时间衰减（以最近 30 天信号为主）
+- 用户可在 Settings 页查看信号溯源（context 原文）
 
 ---
 
@@ -461,18 +580,21 @@ src/
 │   │   │   ├── actions.ts       # deleteSavedRecipe
 │   │   │   └── _components/     # SavedRecipeList、DeleteRecipeButton
 │   │   └── settings/            # 个人设置
-│   │       ├── page.tsx         # 设置页
+│   │       ├── page.tsx         # 设置页（含口味画像区域）
 │   │       ├── actions.ts       # saveProfile
-│   │       └── _components/     # SettingsForm
+│   │       ├── taste-actions.ts # 口味信号 CRUD（addTasteSignal/delete/clearAll）
+│   │       └── _components/     # SettingsForm、TasteProfileSection
 │   ├── api/                     # API 路由
 │   │   ├── chat/                # AI 对话菜谱推荐
+│   │   ├── taste/extract/       # 口味信号异步提取
 │   │   ├── ingredients/parse/   # 食材智能解析
 │   │   └── recipes/             # 菜谱生成 + 分析 + 保存
 │   ├── layout.tsx               # 根布局（PWA manifest + theme-color + SW）
 │   └── page.tsx                 # 首页（重定向到 /chat）
 ├── lib/
 │   ├── ai-service/              # AI 抽象层（types / registry / prompts）
-│   ├── icon-generation.ts       # Gemini Imagen 图标/封面生成
+│   ├── taste/                   # 口味学习模块（types / extract / aggregate）
+│   ├── icon-generation.ts       # Gemini Imagen 图标/封面生成 + 共享图标库
 │   ├── supabase/                # Supabase 客户端（browser / server / admin / types）
 │   ├── validators/              # Zod 验证 Schema（chat / ingredient / recipe）
 │   └── utils.ts                 # 工具函数（cn / formatDate）
