@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { IngredientFormSchema } from "@/lib/validators/ingredient";
 import { generateAndStoreIcon } from "@/lib/icon-generation";
+import { normalizeIngredientName } from "@/lib/icon-generation";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 
 async function getAuthUserId() {
   const supabase = await createClient();
@@ -18,6 +21,80 @@ function revalidateIngredients() {
   revalidatePath("/kitchen");
   revalidatePath("/chat");
 }
+
+// ── Dedup/merge logic ──────────────────────────────────────────
+
+interface IngredientInput {
+  name: string;
+  category: string;
+  quantity?: number;
+  unit?: string;
+  expiry_date?: string;
+  notes?: string;
+}
+
+/**
+ * Upsert a single ingredient: if same-name ingredient exists for this user,
+ * accumulate quantity and use the later expiry_date. Otherwise insert new.
+ * Returns the ingredient id.
+ */
+async function upsertIngredient(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  item: IngredientInput,
+): Promise<{ id: string; name: string; isNew: boolean }> {
+  const normalized = normalizeIngredientName(item.name);
+
+  // Fetch all user ingredients and match by normalized name
+  const { data: existing } = await supabase
+    .from("ingredients")
+    .select("id, name, quantity, unit, expiry_date")
+    .eq("user_id", userId);
+
+  const match = existing?.find(
+    (e) => normalizeIngredientName(e.name) === normalized,
+  );
+
+  if (match) {
+    // Merge: accumulate quantity, use later expiry_date
+    const mergedQuantity =
+      item.quantity != null
+        ? (match.quantity ?? 0) + item.quantity
+        : match.quantity;
+
+    const mergedExpiry = laterDate(match.expiry_date, item.expiry_date ?? null);
+
+    await supabase
+      .from("ingredients")
+      .update({
+        quantity: mergedQuantity,
+        ...(item.unit && { unit: item.unit }),
+        expiry_date: mergedExpiry,
+      })
+      .eq("id", match.id);
+
+    return { id: match.id, name: match.name, isNew: false };
+  }
+
+  // New ingredient
+  const { data: inserted, error } = await supabase
+    .from("ingredients")
+    .insert({ ...item, user_id: userId })
+    .select("id, name")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return { id: inserted.id, name: inserted.name, isNew: true };
+}
+
+/** Return the later of two ISO date strings (or the non-null one). */
+function laterDate(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+// ── Public actions ─────────────────────────────────────────────
 
 export type AddIngredientState =
   | { status: "idle" }
@@ -43,16 +120,15 @@ export async function addIngredient(
   }
 
   const { supabase, userId } = await getAuthUserId();
-  const { data: inserted, error } = await supabase
-    .from("ingredients")
-    .insert({ ...parsed.data, user_id: userId })
-    .select("id, name")
-    .single();
 
-  if (error) return { status: "error", message: error.message };
-
-  // Fire-and-forget icon generation
-  if (inserted) void generateAndStoreIcon(inserted.id, inserted.name);
+  try {
+    const result = await upsertIngredient(supabase, userId, parsed.data);
+    if (result.isNew) {
+      void generateAndStoreIcon(result.id, result.name);
+    }
+  } catch (err) {
+    return { status: "error", message: err instanceof Error ? err.message : "保存失败" };
+  }
 
   revalidateIngredients();
   return { status: "success" };
@@ -110,30 +186,91 @@ export async function bulkAddIngredients(
 ): Promise<BulkAddResult> {
   const { supabase, userId } = await getAuthUserId();
 
-  const rows = items
+  const validItems = items
     .map((item) => {
       const parsed = IngredientFormSchema.safeParse(item);
-      return parsed.success ? { ...parsed.data, user_id: userId } : null;
+      return parsed.success ? parsed.data : null;
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  if (rows.length === 0) {
+  if (validItems.length === 0) {
     return { status: "error", message: "没有合法的食材数据" };
   }
 
-  const { data: inserted, error } = await supabase
+  // Fetch existing ingredients once for dedup
+  const { data: existing } = await supabase
     .from("ingredients")
-    .insert(rows)
-    .select("id, name");
-  if (error) return { status: "error", message: error.message };
+    .select("id, name, quantity, unit, expiry_date")
+    .eq("user_id", userId);
 
-  // Fire-and-forget icon generation for each
-  if (inserted) {
-    for (const row of inserted) {
-      void generateAndStoreIcon(row.id, row.name);
+  const existingMap = new Map(
+    (existing ?? []).map((e) => [normalizeIngredientName(e.name), e]),
+  );
+
+  let newCount = 0;
+  const toInsert: Array<typeof validItems[number] & { user_id: string }> = [];
+  const toUpdate: Array<{ id: string; quantity: number | null; expiry_date: string | null; unit?: string }> = [];
+
+  for (const item of validItems) {
+    const normalized = normalizeIngredientName(item.name);
+    const match = existingMap.get(normalized);
+
+    if (match) {
+      const mergedQuantity =
+        item.quantity != null
+          ? (match.quantity ?? 0) + item.quantity
+          : match.quantity;
+      const mergedExpiry = laterDate(match.expiry_date, item.expiry_date ?? null);
+
+      toUpdate.push({
+        id: match.id,
+        quantity: mergedQuantity,
+        expiry_date: mergedExpiry,
+        ...(item.unit && { unit: item.unit }),
+      });
+
+      // Update the map so subsequent items with same name accumulate correctly
+      existingMap.set(normalized, {
+        ...match,
+        quantity: mergedQuantity,
+        expiry_date: mergedExpiry,
+      });
+    } else {
+      toInsert.push({ ...item, user_id: userId });
+      // Add to map so duplicates within the same batch also merge
+      existingMap.set(normalized, {
+        id: "",
+        name: item.name,
+        quantity: item.quantity ?? null,
+        unit: item.unit ?? null,
+        expiry_date: item.expiry_date ?? null,
+      });
+      newCount++;
+    }
+  }
+
+  // Execute updates
+  for (const upd of toUpdate) {
+    const { id, ...fields } = upd;
+    await supabase.from("ingredients").update(fields).eq("id", id);
+  }
+
+  // Execute inserts
+  if (toInsert.length > 0) {
+    const { data: inserted, error } = await supabase
+      .from("ingredients")
+      .insert(toInsert)
+      .select("id, name");
+
+    if (error) return { status: "error", message: error.message };
+
+    if (inserted) {
+      for (const row of inserted) {
+        void generateAndStoreIcon(row.id, row.name);
+      }
     }
   }
 
   revalidateIngredients();
-  return { status: "success", count: rows.length };
+  return { status: "success", count: validItems.length };
 }
