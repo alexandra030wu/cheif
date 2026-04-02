@@ -200,7 +200,7 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
                         💡 {step.tip}
                       </p>
                     )}
-                    {step.durationSeconds > 0 && (
+                    {step.durationSeconds != null && step.durationSeconds > 0 && (
                       <p className="text-xs text-gray-400 mt-1">
                         约 {step.durationSeconds >= 60 ? `${Math.round(step.durationSeconds / 60)} 分钟` : `${step.durationSeconds} 秒`}
                       </p>

@@ -52,16 +52,18 @@ export const RecipeSchema = z.object({
     z.object({
       order: z.number(),
       instruction: z.string(),
-      durationSeconds: z.number(),
+      durationSeconds: z.number().optional(),
       tip: z.string().optional(),
     })
   ),
-  nutritionEstimate: z.object({
-    calories: z.number(),
-    proteinG: z.number(),
-    carbsG: z.number(),
-    fatG: z.number(),
-  }),
+  nutritionEstimate: z
+    .object({
+      calories: z.number(),
+      proteinG: z.number(),
+      carbsG: z.number(),
+      fatG: z.number(),
+    })
+    .optional(),
   tags: z.array(z.string()),
   coverImageUrl: z.string().optional(),
 });
