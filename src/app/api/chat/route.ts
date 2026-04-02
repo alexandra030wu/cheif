@@ -1,6 +1,9 @@
 import { getAIService } from "@/lib/ai-service";
 import { ChatRequestSchema } from "@/lib/validators/chat";
 
+// Vercel Hobby default is 10s, AI generation needs more time
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const body = await request.json();
   const parsed = ChatRequestSchema.safeParse(body);

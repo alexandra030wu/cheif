@@ -2,6 +2,8 @@ import { generateObject } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
 import { z } from "zod";
 
+export const maxDuration = 30;
+
 const ParsedIngredientListSchema = z.object({
   items: z.array(
     z.object({

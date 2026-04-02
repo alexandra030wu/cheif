@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { extractTasteSignals } from "@/lib/taste/extract";
 import { aggregateTasteProfile } from "@/lib/taste/aggregate";
 
+export const maxDuration = 30;
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

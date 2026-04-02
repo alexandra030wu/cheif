@@ -5,15 +5,28 @@ import type { AIProviderConfig, AIProviderID } from "./types";
 function buildProxiedFetch() {
   const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
   if (!proxyUrl) return undefined;
-  // undici ProxyAgent lets Node.js native fetch tunnel through an HTTP/SOCKS proxy
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { ProxyAgent, fetch: undiciFetch } = require("undici") as typeof import("undici");
-  const dispatcher = new ProxyAgent(proxyUrl);
-  return (input: RequestInfo | URL, init?: RequestInit) =>
-    undiciFetch(input as Parameters<typeof undiciFetch>[0], {
-      ...(init as Parameters<typeof undiciFetch>[1]),
-      dispatcher,
-    }) as unknown as Promise<Response>;
+
+  // Skip proxy on serverless platforms (Vercel/AWS Lambda) where localhost proxies don't exist
+  if (proxyUrl.includes("127.0.0.1") || proxyUrl.includes("localhost")) {
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      return undefined;
+    }
+  }
+
+  try {
+    // undici ProxyAgent lets Node.js native fetch tunnel through an HTTP/SOCKS proxy
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ProxyAgent, fetch: undiciFetch } = require("undici") as typeof import("undici");
+    const dispatcher = new ProxyAgent(proxyUrl);
+    return (input: RequestInfo | URL, init?: RequestInit) =>
+      undiciFetch(input as Parameters<typeof undiciFetch>[0], {
+        ...(init as Parameters<typeof undiciFetch>[1]),
+        dispatcher,
+      }) as unknown as Promise<Response>;
+  } catch {
+    // If undici is unavailable, fall back to native fetch
+    return undefined;
+  }
 }
 
 export function createLanguageModelProvider(config: AIProviderConfig) {
