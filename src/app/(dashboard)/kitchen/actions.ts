@@ -171,6 +171,14 @@ export async function deleteIngredient(id: string) {
   revalidateIngredients();
 }
 
+export async function batchDeleteIngredients(ids: string[]): Promise<{ count: number }> {
+  if (ids.length === 0) return { count: 0 };
+  const { supabase } = await getAuthUserId();
+  await supabase.from("ingredients").delete().in("id", ids);
+  revalidateIngredients();
+  return { count: ids.length };
+}
+
 export type BulkAddResult =
   | { status: "success"; count: number }
   | { status: "error"; message: string };
