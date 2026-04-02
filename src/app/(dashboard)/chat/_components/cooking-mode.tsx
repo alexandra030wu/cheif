@@ -106,7 +106,7 @@ export function CookingMode({ recipe, onClose }: Props) {
   const steps = recipe.steps;
   const total = steps.length;
   const current = steps[step];
-  const durationSeconds = (current.durationMinutes ?? 0) * 60;
+  const durationSeconds = current.durationSeconds ?? 0;
   const hasTimer = durationSeconds > 0;
 
   const timer = useTimer(durationSeconds);
@@ -188,6 +188,13 @@ export function CookingMode({ recipe, onClose }: Props) {
         <p className="text-xl md:text-2xl font-medium leading-relaxed text-center max-w-lg">
           {current.instruction}
         </p>
+
+        {/* Tip */}
+        {current.tip && (
+          <p className="text-sm text-amber-400/80 text-center max-w-md">
+            💡 {current.tip}
+          </p>
+        )}
 
         {/* Timer */}
         {hasTimer && (

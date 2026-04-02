@@ -52,17 +52,16 @@ export const RecipeSchema = z.object({
     z.object({
       order: z.number(),
       instruction: z.string(),
-      durationMinutes: z.number().optional(),
+      durationSeconds: z.number(),
+      tip: z.string().optional(),
     })
   ),
-  nutritionEstimate: z
-    .object({
-      calories: z.number().optional(),
-      protein: z.string().optional(),
-      carbs: z.string().optional(),
-      fat: z.string().optional(),
-    })
-    .optional(),
+  nutritionEstimate: z.object({
+    calories: z.number(),
+    proteinG: z.number(),
+    carbsG: z.number(),
+    fatG: z.number(),
+  }),
   tags: z.array(z.string()),
   coverImageUrl: z.string().optional(),
 });
@@ -91,18 +90,41 @@ export type IngredientInfo = z.infer<typeof IngredientInfoSchema>;
 
 // ---------- Chat domain ----------
 
+export interface ChatIngredient {
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  daysUntilExpiry: number | null;
+}
+
+export interface ChatTasteProfile {
+  liked_dishes: string[];
+  disliked_dishes: string[];
+  liked_cuisines: string[];
+  disliked_cuisines: string[];
+  liked_ingredients: string[];
+  disliked_ingredients: string[];
+  liked_flavors: string[];
+  disliked_flavors: string[];
+  cooking_styles: string[];
+  dietary_goals: string[];
+  signal_count: number;
+  last_updated: string;
+}
+
 export interface ChatRecipeInput {
   message: string;
-  ingredients: string[];
-  urgentIngredients?: string[];
+  ingredients: ChatIngredient[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
   preferences?: {
+    nickname?: string;
     dietary_preferences?: string[];
     allergies?: string[];
     cooking_level?: string;
     kitchen_equipment?: string[];
     default_servings?: string;
   };
+  tasteProfile?: ChatTasteProfile;
 }
 
 export const ChatResponseSchema = z.object({

@@ -20,6 +20,7 @@ interface Ingredient {
 }
 
 interface UserPreferences {
+  nickname?: string;
   dietary_preferences?: string[];
   allergies?: string[];
   cooking_level?: string;
@@ -27,9 +28,25 @@ interface UserPreferences {
   default_servings?: string;
 }
 
+interface TasteProfile {
+  liked_dishes: string[];
+  disliked_dishes: string[];
+  liked_cuisines: string[];
+  disliked_cuisines: string[];
+  liked_ingredients: string[];
+  disliked_ingredients: string[];
+  liked_flavors: string[];
+  disliked_flavors: string[];
+  cooking_styles: string[];
+  dietary_goals: string[];
+  signal_count: number;
+  last_updated: string;
+}
+
 interface Props {
   ingredients: Ingredient[];
   userPreferences?: UserPreferences;
+  tasteProfile?: TasteProfile;
 }
 
 function getTimeOfDay(): TimeOfDay {
@@ -40,7 +57,7 @@ function getTimeOfDay(): TimeOfDay {
   return "latenight";
 }
 
-export function ChatInterface({ ingredients, userPreferences }: Props) {
+export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Props) {
   const messages = useChatStore((s) => s.messages);
   const addMessage = useChatStore((s) => s.addMessage);
   const clearMessages = useChatStore((s) => s.clearMessages);
@@ -50,18 +67,19 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const ingredientNames = useMemo(
-    () => ingredients.map((i) => i.name),
-    [ingredients]
-  );
-
-  const urgentIngredients = useMemo(() => {
+  const chatIngredients = useMemo(() => {
     const now = Date.now();
-    const sevenDays = 7 * 86400000;
-    return ingredients
-      .filter((i) => i.expiry_date && new Date(i.expiry_date).getTime() < now + sevenDays)
-      .map((i) => i.name);
+    const msPerDay = 86400000;
+    return ingredients.map((i) => ({
+      name: i.name,
+      quantity: i.quantity,
+      unit: i.unit,
+      daysUntilExpiry: i.expiry_date
+        ? Math.floor((new Date(i.expiry_date).getTime() - now) / msPerDay)
+        : null,
+    }));
   }, [ingredients]);
+
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -99,10 +117,10 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text.trim(),
-            ingredients: ingredientNames,
-            urgentIngredients,
+            ingredients: chatIngredients,
             timeOfDay: getTimeOfDay(),
             preferences: userPreferences,
+            tasteProfile,
           }),
         });
 
@@ -120,6 +138,14 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
           content: data.reply,
           recipes: data.recipes,
         });
+
+        // Fire-and-forget: extract taste signals from this exchange
+        const conversation = `用户: ${text.trim()}\n助手: ${data.reply}`;
+        void fetch("/api/taste/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation }),
+        }).catch(() => {});
       } catch {
         addMessage({ role: "assistant", content: "网络错误，请重试" });
       } finally {
@@ -127,7 +153,7 @@ export function ChatInterface({ ingredients, userPreferences }: Props) {
         scrollToBottom();
       }
     },
-    [ingredientNames, urgentIngredients, isLoading, scrollToBottom, userPreferences, addMessage]
+    [chatIngredients, isLoading, scrollToBottom, userPreferences, addMessage]
   );
 
   const handleSend = useCallback(() => {

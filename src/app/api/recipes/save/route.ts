@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { RecipeSchema } from "@/lib/ai-service/types";
 import type { Json } from "@/lib/supabase/types";
 import { generateAndStoreCover } from "@/lib/icon-generation";
+import { aggregateTasteProfile } from "@/lib/taste";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -59,6 +60,27 @@ export async function POST(request: Request) {
 
   // Fire-and-forget cover image generation (uses admin client internally)
   void generateAndStoreCover(inserted.id, recipe.title);
+
+  // Fire-and-forget: extract taste signals from save behavior
+  void (async () => {
+    try {
+      const signals = [
+        { user_id: user.id, signal_type: "like_dish", signal_value: recipe.title, confidence: 0.6, source: "behavior" },
+        ...(recipe.cuisine ? [{ user_id: user.id, signal_type: "like_cuisine", signal_value: recipe.cuisine, confidence: 0.5, source: "behavior" }] : []),
+        ...recipe.ingredients.slice(0, 3).map((ing) => ({
+          user_id: user.id,
+          signal_type: "like_ingredient",
+          signal_value: ing.name,
+          confidence: 0.4,
+          source: "behavior",
+        })),
+      ];
+      await supabase.from("taste_signals").insert(signals);
+      await aggregateTasteProfile(supabase, user.id);
+    } catch {
+      // best-effort, don't fail the save
+    }
+  })();
 
   return Response.json({ id: inserted.id, saved: true });
 }

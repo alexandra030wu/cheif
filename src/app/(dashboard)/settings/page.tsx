@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "./_components/settings-form";
+import { TasteProfileSection } from "./_components/taste-profile-section";
+import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/taste";
 import type { ProfileData } from "./actions";
 
 async function SettingsLoader() {
@@ -18,6 +20,8 @@ async function SettingsLoader() {
     cooking_level: "beginner",
     kitchen_equipment: [],
   };
+
+  let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
 
   if (user) {
     const { data: profile } = await supabase
@@ -38,10 +42,18 @@ async function SettingsLoader() {
         cooking_level: profile.cooking_level ?? "beginner",
         kitchen_equipment: profile.kitchen_equipment ?? [],
       };
+      tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }
   }
 
-  return <SettingsForm initial={initial} />;
+  return (
+    <>
+      <SettingsForm initial={initial} />
+      <div className="mt-8 pt-8 border-t border-gray-100">
+        <TasteProfileSection profile={tasteProfile} />
+      </div>
+    </>
+  );
 }
 
 export default function SettingsPage() {

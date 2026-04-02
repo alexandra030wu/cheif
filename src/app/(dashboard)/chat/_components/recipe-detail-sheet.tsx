@@ -195,9 +195,14 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
                     <p className="text-sm text-gray-700 leading-relaxed">
                       {step.instruction}
                     </p>
-                    {step.durationMinutes && (
+                    {step.tip && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        💡 {step.tip}
+                      </p>
+                    )}
+                    {step.durationSeconds > 0 && (
                       <p className="text-xs text-gray-400 mt-1">
-                        约 {step.durationMinutes} 分钟
+                        约 {step.durationSeconds >= 60 ? `${Math.round(step.durationSeconds / 60)} 分钟` : `${step.durationSeconds} 秒`}
                       </p>
                     )}
                   </div>
@@ -213,38 +218,30 @@ export function RecipeDetailSheet({ recipe, onClose, alreadySaved }: Props) {
                 营养估算
               </h2>
               <div className="grid grid-cols-4 gap-2">
-                {recipe.nutritionEstimate.calories != null && (
-                  <div className="rounded-lg bg-gray-50 p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
-                      {recipe.nutritionEstimate.calories}
-                    </p>
-                    <p className="text-xs text-gray-400">千卡</p>
-                  </div>
-                )}
-                {recipe.nutritionEstimate.protein && (
-                  <div className="rounded-lg bg-gray-50 p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
-                      {recipe.nutritionEstimate.protein}
-                    </p>
-                    <p className="text-xs text-gray-400">蛋白质</p>
-                  </div>
-                )}
-                {recipe.nutritionEstimate.carbs && (
-                  <div className="rounded-lg bg-gray-50 p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
-                      {recipe.nutritionEstimate.carbs}
-                    </p>
-                    <p className="text-xs text-gray-400">碳水</p>
-                  </div>
-                )}
-                {recipe.nutritionEstimate.fat && (
-                  <div className="rounded-lg bg-gray-50 p-3 text-center">
-                    <p className="text-lg font-semibold text-gray-900">
-                      {recipe.nutritionEstimate.fat}
-                    </p>
-                    <p className="text-xs text-gray-400">脂肪</p>
-                  </div>
-                )}
+                <div className="rounded-lg bg-gray-50 p-3 text-center">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {recipe.nutritionEstimate.calories}
+                  </p>
+                  <p className="text-xs text-gray-400">千卡</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3 text-center">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {recipe.nutritionEstimate.proteinG}g
+                  </p>
+                  <p className="text-xs text-gray-400">蛋白质</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3 text-center">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {recipe.nutritionEstimate.carbsG}g
+                  </p>
+                  <p className="text-xs text-gray-400">碳水</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3 text-center">
+                  <p className="text-lg font-semibold text-gray-900">
+                    {recipe.nutritionEstimate.fatG}g
+                  </p>
+                  <p className="text-xs text-gray-400">脂肪</p>
+                </div>
               </div>
             </div>
           )}

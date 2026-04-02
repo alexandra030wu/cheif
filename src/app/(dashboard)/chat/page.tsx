@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/taste";
 import { ChatInterface } from "./_components/chat-interface";
 
 async function ChatLoader() {
@@ -14,6 +15,7 @@ async function ChatLoader() {
   ]);
 
   let preferences: {
+    nickname?: string;
     dietary_preferences?: string[];
     allergies?: string[];
     cooking_level?: string;
@@ -21,15 +23,18 @@ async function ChatLoader() {
     default_servings?: string;
   } | undefined;
 
+  let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
+
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("dietary_preferences, allergies, cooking_level, kitchen_equipment, default_servings")
+      .select("nickname, dietary_preferences, allergies, cooking_level, kitchen_equipment, default_servings, taste_profile")
       .eq("id", user.id)
       .single();
 
     if (profile) {
       preferences = {
+        nickname: profile.nickname ?? undefined,
         dietary_preferences: Array.isArray(profile.dietary_preferences)
           ? (profile.dietary_preferences as string[])
           : undefined,
@@ -38,6 +43,7 @@ async function ChatLoader() {
         kitchen_equipment: profile.kitchen_equipment ?? undefined,
         default_servings: profile.default_servings ?? undefined,
       };
+      tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }
   }
 
@@ -45,6 +51,7 @@ async function ChatLoader() {
     <ChatInterface
       ingredients={ingredients ?? []}
       userPreferences={preferences}
+      tasteProfile={tasteProfile}
     />
   );
 }

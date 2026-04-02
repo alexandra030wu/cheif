@@ -44,7 +44,7 @@ async function SavedRecipeLoader() {
         ? (r.ingredients as { name: string; amount: string; unit: string; notes?: string }[])
         : [];
       const stepsArr = Array.isArray(r.steps)
-        ? (r.steps as { order: number; instruction: string; durationMinutes?: number }[])
+        ? (r.steps as { order: number; instruction: string; durationSeconds: number; tip?: string }[])
         : [];
 
       const recipe: Recipe = {

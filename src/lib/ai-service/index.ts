@@ -76,4 +76,4 @@ export function getAIService(): AIService {
   return defaultService;
 }
 
-export type { AIService, AIProviderID, AIProviderConfig, Recipe, IngredientInfo, ChatResponse, ChatRecipeInput } from "./types";
+export type { AIService, AIProviderID, AIProviderConfig, Recipe, IngredientInfo, ChatResponse, ChatRecipeInput, ChatIngredient } from "./types";

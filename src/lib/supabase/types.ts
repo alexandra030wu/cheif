@@ -12,6 +12,28 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      ingredient_icons: {
+        Row: {
+          id: string;
+          name: string;
+          name_normalized: string;
+          icon_url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          name_normalized: string;
+          icon_url: string;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          name_normalized?: string;
+          icon_url?: string;
+        };
+        Relationships: [];
+      };
       ingredients: {
         Row: {
           id: string;
@@ -124,6 +146,36 @@ export interface Database {
         };
         Relationships: [];
       };
+      taste_signals: {
+        Row: {
+          id: string;
+          user_id: string;
+          signal_type: string;
+          signal_value: string;
+          confidence: number;
+          source: string;
+          context: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          signal_type: string;
+          signal_value: string;
+          confidence?: number;
+          source?: string;
+          context?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          signal_type?: string;
+          signal_value?: string;
+          confidence?: number;
+          source?: string;
+          context?: string | null;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -137,6 +189,7 @@ export interface Database {
           cooking_level: string | null;
           kitchen_equipment: string[] | null;
           default_servings: string | null;
+          taste_profile: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -152,6 +205,7 @@ export interface Database {
           cooking_level?: string | null;
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
+          taste_profile?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -166,6 +220,7 @@ export interface Database {
           cooking_level?: string | null;
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
+          taste_profile?: Json | null;
           updated_at?: string;
         };
         Relationships: [];
