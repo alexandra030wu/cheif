@@ -40,10 +40,47 @@ async function generateImage(
   return Buffer.from(base64, "base64");
 }
 
-export async function generateAndStoreIcon(
+// ── Name normalization ──
+
+export function normalizeIngredientName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[（）()]/g, "");
+}
+
+// ── Shared icon library ──
+
+/**
+ * Get or create a shared ingredient icon.
+ * Returns the icon URL from the shared library, generating one if it doesn't exist.
+ * Updates the ingredient row's icon_url as a side-effect.
+ */
+export async function getOrCreateSharedIcon(
   ingredientId: string,
   name: string
 ): Promise<void> {
+  const admin = createAdminClient();
+  const normalized = normalizeIngredientName(name);
+
+  // 1. Check shared library
+  const { data: existing } = await admin
+    .from("ingredient_icons")
+    .select("icon_url")
+    .eq("name_normalized", normalized)
+    .single();
+
+  if (existing) {
+    // Cache hit — just update the ingredient row
+    await admin
+      .from("ingredients")
+      .update({ icon_url: existing.icon_url })
+      .eq("id", ingredientId);
+    return;
+  }
+
+  // 2. Cache miss — generate new icon
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[icon-gen] GEMINI_API_KEY not set, skipping");
@@ -54,23 +91,50 @@ export async function generateAndStoreIcon(
     const buffer = await generateImage(apiKey, buildIconPrompt(name));
     if (!buffer) return;
 
-    const admin = createAdminClient();
-    const filePath = `${ingredientId}.png`;
+    const filePath = `${normalized}.webp`;
 
     const { error: uploadError } = await admin.storage
       .from("ingredient-icons")
-      .upload(filePath, buffer, { contentType: "image/png", upsert: true });
+      .upload(filePath, buffer, { contentType: "image/webp", upsert: true });
 
     if (uploadError) {
       console.error("[icon-gen] Storage upload error:", uploadError.message);
       return;
     }
 
-    const { data: { publicUrl } } = admin.storage.from("ingredient-icons").getPublicUrl(filePath);
-    await admin.from("ingredients").update({ icon_url: publicUrl }).eq("id", ingredientId);
+    const {
+      data: { publicUrl },
+    } = admin.storage.from("ingredient-icons").getPublicUrl(filePath);
+
+    // 3. Insert into shared library
+    await admin.from("ingredient_icons").upsert(
+      {
+        name,
+        name_normalized: normalized,
+        icon_url: publicUrl,
+      },
+      { onConflict: "name_normalized" }
+    );
+
+    // 4. Update ingredient row
+    await admin
+      .from("ingredients")
+      .update({ icon_url: publicUrl })
+      .eq("id", ingredientId);
   } catch (err) {
     console.error("[icon-gen] Unexpected error:", err instanceof Error ? err.message : err);
   }
+}
+
+/**
+ * @deprecated Use getOrCreateSharedIcon instead.
+ * Kept for backwards compatibility — redirects to the shared icon flow.
+ */
+export async function generateAndStoreIcon(
+  ingredientId: string,
+  name: string
+): Promise<void> {
+  return getOrCreateSharedIcon(ingredientId, name);
 }
 
 /**
