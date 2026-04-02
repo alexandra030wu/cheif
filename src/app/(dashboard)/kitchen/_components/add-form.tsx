@@ -1,20 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { addIngredient, type AddIngredientState } from "../actions";
-
-const CATEGORIES = [
-  { value: "vegetable", label: "蔬菜" },
-  { value: "fruit", label: "水果" },
-  { value: "protein", label: "蛋白质（肉/蛋/豆）" },
-  { value: "dairy", label: "乳制品" },
-  { value: "grain", label: "谷物/主食" },
-  { value: "spice", label: "香料" },
-  { value: "condiment", label: "调味品" },
-  { value: "other", label: "其他" },
-];
+import { CATEGORIES } from "./constants";
 
 const inputClass =
   "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 md:py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-0 transition-colors";
@@ -23,19 +13,28 @@ const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
 const initialState: AddIngredientState = { status: "idle" };
 
-export function AddIngredientForm() {
-  const router = useRouter();
-  const [state, action, pending] = useActionState(addIngredient, initialState);
+interface Props {
+  onBack?: () => void;
+}
 
+export function AddIngredientForm({ onBack }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action, pending] = useActionState(addIngredient, initialState);
+  const [savedCount, setSavedCount] = useState(0);
+
+  // On success: reset form, increment counter (don't redirect)
   useEffect(() => {
-    if (state.status === "success") router.push("/kitchen");
-  }, [state, router]);
+    if (state.status === "success") {
+      formRef.current?.reset();
+      setSavedCount((c) => c + 1);
+    }
+  }, [state]);
 
   const fieldErrors = state.status === "error" ? state.fieldErrors : undefined;
   const message = state.status === "error" ? state.message : undefined;
 
   return (
-    <form action={action} className="space-y-5">
+    <form ref={formRef} action={action} className="space-y-5">
       {message && (
         <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
           {message}
@@ -118,14 +117,26 @@ export function AddIngredientForm() {
         >
           {pending ? "保存中…" : "保存食材"}
         </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-lg border border-gray-200 px-4 py-3 md:py-2 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-        >
-          取消
-        </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg border border-gray-200 px-4 py-3 md:py-2 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          >
+            返回选择
+          </button>
+        )}
       </div>
+
+      {/* Saved counter */}
+      {savedCount > 0 && (
+        <p className="text-center text-sm text-gray-400 pt-1">
+          已添加 {savedCount} 个 ·{" "}
+          <Link href="/kitchen" className="text-gray-900 underline underline-offset-2">
+            查看食材库
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

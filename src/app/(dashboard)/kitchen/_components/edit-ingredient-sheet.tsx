@@ -2,32 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { updateIngredient, deleteIngredient } from "../actions";
-
-const CATEGORIES = [
-  { value: "vegetable", label: "蔬菜" },
-  { value: "fruit", label: "水果" },
-  { value: "protein", label: "蛋白质（肉/蛋/豆）" },
-  { value: "dairy", label: "乳制品" },
-  { value: "grain", label: "谷物/主食" },
-  { value: "spice", label: "香料" },
-  { value: "condiment", label: "调味品" },
-  { value: "other", label: "其他" },
-];
-
-const CATEGORY_EMOJI: Record<string, string> = {
-  vegetable: "🥬",
-  fruit: "🍎",
-  protein: "🥩",
-  dairy: "🧀",
-  grain: "🌾",
-  spice: "🧂",
-  condiment: "🫙",
-  other: "📦",
-};
-
-const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.label])
-);
+import { CATEGORIES, CATEGORY_EMOJI, CATEGORY_LABELS } from "./constants";
 
 const inputClass =
   "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 md:py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors";
