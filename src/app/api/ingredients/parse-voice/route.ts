@@ -13,6 +13,7 @@ const VoiceActionSchema = z.object({
         .enum(["vegetable", "fruit", "protein", "dairy", "grain", "spice", "condiment", "other"])
         .optional()
         .describe("分类，add 时必填"),
+      expiry_date: z.string().optional().describe("保质期到期日，ISO 格式如 2026-04-10"),
       matchName: z.string().optional().describe("update/remove 时匹配的现有食材名称"),
     })
   ),
@@ -37,12 +38,14 @@ export async function POST(request: Request) {
   const config = resolveProviderConfig();
   const model = createLanguageModelProvider(config);
 
+  const today = new Date().toISOString().slice(0, 10);
+
   try {
     const { object } = await generateObject({
       model,
       schema: VoiceActionSchema,
       temperature: 0.2,
-      prompt: `你是食材识别助手。用户正在用语音添加食材到冰箱。
+      prompt: `你是食材识别助手。用户正在用语音添加食材到冰箱。今天是 ${today}。
 
 当前已识别的食材列表：${currentListStr}
 
@@ -57,7 +60,15 @@ export async function POST(request: Request) {
 - 一句话可能包含多个操作
 - add 时必须填 category（vegetable/fruit/protein/dairy/grain/spice/condiment/other）
 - update/remove 时 matchName 必须是当前列表中已有的食材名称
-- 如果听不清或不是食材相关内容，返回空 actions`,
+- 如果听不清或不是食材相关内容，返回空 actions
+
+保质期规则（expiry_date 字段，ISO 日期格式）：
+- 用户明确说了日期（"保质期到4月10号"/"到下周三"/"7天"）→ 解析为具体日期
+- 用户没说保质期 → 根据食材分类自动估算，从今天起算：
+  - 鸡蛋: +14天, 鲜奶/酸奶: +7天, 鲜肉/海鲜: +3天, 蔬菜/水果: +5天
+  - 豆腐/豆制品: +3天, 面包: +5天, 干货/调味品/香料: +90天, 冷冻品: +30天
+  - 米面粮油: +180天, 其他: +14天
+- add 时必须填 expiry_date`,
     });
 
     return Response.json(object);

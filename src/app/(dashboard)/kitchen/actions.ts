@@ -105,6 +105,7 @@ export async function bulkAddIngredients(
     category: string;
     quantity?: number;
     unit?: string;
+    expiry_date?: string;
   }>
 ): Promise<BulkAddResult> {
   const { supabase, userId } = await getAuthUserId();

@@ -9,6 +9,7 @@ export interface ConfirmItem {
   quantity?: number;
   unit?: string;
   category: string;
+  expiry_date?: string;
   checked: boolean;
 }
 
@@ -127,6 +128,17 @@ export function IngredientConfirmList({
                     ))}
                   </select>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 shrink-0">到期</span>
+                  <input
+                    type="date"
+                    value={item.expiry_date ?? ""}
+                    onChange={(e) =>
+                      onUpdate(item.id, { expiry_date: e.target.value || undefined })
+                    }
+                    className={inputClass + " text-xs"}
+                  />
+                </div>
               </div>
 
               {/* Delete */}
@@ -155,6 +167,7 @@ export function IngredientConfirmList({
                 <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-20">数量</th>
                 <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-20">单位</th>
                 <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-28">分类</th>
+                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-32">到期日</th>
                 <th className="px-2 py-2 w-8" />
               </tr>
             </thead>
@@ -209,6 +222,14 @@ export function IngredientConfirmList({
                         <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="date"
+                      value={item.expiry_date ?? ""}
+                      onChange={(e) => onUpdate(item.id, { expiry_date: e.target.value || undefined })}
+                      className={inputClass}
+                    />
                   </td>
                   <td className="px-2 py-1.5">
                     <button type="button" onClick={() => onRemove(item.id)} className="text-gray-300 hover:text-red-400 transition-colors">

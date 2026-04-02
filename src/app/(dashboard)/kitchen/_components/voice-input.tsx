@@ -17,6 +17,7 @@ interface VoiceAction {
   quantity?: number;
   unit?: string;
   category?: string;
+  expiry_date?: string;
   matchName?: string;
 }
 
@@ -231,6 +232,7 @@ export function VoiceInput({ onBack }: Props) {
         category: i.category,
         quantity: i.quantity,
         unit: i.unit,
+        expiry_date: i.expiry_date,
       })),
     );
     setSaving(false);
@@ -345,6 +347,7 @@ function applyActions(items: ConfirmItem[], actions: VoiceAction[]): ConfirmItem
           quantity: action.quantity,
           unit: action.unit,
           category: action.category ?? "other",
+          expiry_date: action.expiry_date,
           checked: true,
         });
         break;
@@ -359,6 +362,7 @@ function applyActions(items: ConfirmItem[], actions: VoiceAction[]): ConfirmItem
             ...result[idx],
             ...(action.quantity != null && { quantity: action.quantity }),
             ...(action.unit != null && { unit: action.unit }),
+            ...(action.expiry_date != null && { expiry_date: action.expiry_date }),
             ...(action.name !== target && { name: action.name }),
           };
         }
