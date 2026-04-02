@@ -7,6 +7,17 @@ export const ChatIngredientSchema = z.object({
   daysUntilExpiry: z.number().nullable(),
 });
 
+/** Accept both new object format and legacy string format for ingredients */
+const IngredientItemSchema = z.union([
+  ChatIngredientSchema,
+  z.string().transform((name) => ({
+    name,
+    quantity: null,
+    unit: null,
+    daysUntilExpiry: null,
+  })),
+]);
+
 export const TasteProfileSchema = z.object({
   liked_dishes: z.array(z.string()),
   disliked_dishes: z.array(z.string()),
@@ -24,7 +35,8 @@ export const TasteProfileSchema = z.object({
 
 export const ChatRequestSchema = z.object({
   message: z.string().min(1),
-  ingredients: z.array(ChatIngredientSchema),
+  ingredients: z.array(IngredientItemSchema),
+  urgentIngredients: z.array(z.string()).optional(), // legacy field, ignored
   timeOfDay: z.enum(["morning", "noon", "evening", "latenight"]),
   preferences: z
     .object({
