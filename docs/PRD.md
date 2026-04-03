@@ -1,6 +1,6 @@
 # Cheif — 智能厨房助手 PRD
 
-> 最后更新：2026-04-02
+> 最后更新：2026-04-03
 
 ---
 
@@ -92,9 +92,28 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 通用提示词：「惊喜菜谱」「HOT 热门菜」「健身餐」「快手10分钟」
 - 点击自动作为用户消息发送
 
+#### 意图分类 + 流式响应
+
+**意图分类（关键词规则，零延迟）：**
+- **recipe 意图**：消息包含"做/吃/菜/推荐/饿了/来个/快手"等烹饪关键词
+- **chat 意图**：其他所有消息（问好/闲聊/烹饪知识/情绪表达）
+
+**流式输出（SSE `text/event-stream`）：**
+- `text` 事件：逐块文字流式追加（用户立刻看到回复，无需等 15-30 秒）
+- `recipes` 事件：完整菜谱 JSON 一次性发送
+- `[DONE]`：流结束信号
+- chat 意图只发 text 事件；recipe 意图先发 text 再发 recipes
+
+**recipe 意图流程（两阶段）：**
+1. `streamText` 流式生成蛋厨过渡回复（"看到你冰箱有XX…"），1-3 秒出字
+2. `generateObject` 生成结构化菜谱（10-20 秒，但用户已在看文字）
+
+**chat 意图流程：**
+- `streamText` 直接流式回复，蛋厨人设保持
+- 可回答烹饪知识、共情用户情绪、适度引导回烹饪话题
+
 #### AI 菜谱响应（蛋厨 Prompt 系统）
 
-- `generateObject` + `ChatResponseSchema`（reply 文本 + recipes 数组）
 - **蛋厨人设（dan.chef）**：温暖有个性的烹饪助手，说话自然、有趣、偶尔调皮
 - 返回 2-3 道结构化菜谱卡片，风格差异化（快手 + 稍复杂 + 创意）
 - 每张卡片：封面图（AI 生成或渐变占位）、菜名、时间、难度 badge、食材摘要
@@ -187,6 +206,7 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **保质期排序**：默认按保质期升序，最紧急排最前，无保质期排最后
 - **三级过期标记**：已过期（红色边框）、3 天内（橙色）、7 天内（黄色）
 - **过期横幅**：有过期食材时顶部显示「⚠️ 你有 N 个食材已过期，建议尽快处理」
+- **批量管理模式**：右上角「管理」按钮进入，卡片出现圆形勾选框，底部固定操作栏（全选/取消全选 + 已选计数 + 删除），勾选时卡片高亮+缩放反馈，删除需 inline 确认
 - **点击查看详情**：底部 Sheet（90vh），包含：
   - 大图展示（160×160 圆角卡片，AI 图标或 emoji 回退）
   - 名称（大字）+ 分类·数量·过期状态色标（红/橙/黄/绿/灰）
@@ -203,18 +223,31 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 存储到 Supabase Storage `ingredient-icons` bucket，文件名用标准化食材名（如 `番茄.webp`）
 - 无图标时用分类 emoji 回退（🥬🍎🥩🧀🌾🧂🫙📦）
 
-#### 手动录入 (`/kitchen/add` → 手动录入 Tab)
+#### 食材录入系统 (`/kitchen/add`)
 
+**模式选择入口**（2×2 卡片网格）：
+- 📝 手动输入 — 安静环境，一个个添加
+- 🎤 语音添加（推荐） — 说出食材，实时识别
+- 📷 拍照识别 — 即将推出（灰显）
+- 📹 视频录入 — 即将推出（灰显）
+
+**手动模式：**
 - 表单字段：食材名称*、分类*、数量、单位、保质期
-- Zod Schema 验证，`addIngredient` Server Action
+- 连续添加模式：成功后清空表单不跳转，显示"已添加 N 个"计数器
+- `addIngredient` Server Action，入库时按名称去重合并（累加数量 + 取较晚保质期）
 
-#### 智能录入 (`/kitchen/add` → 智能录入 Tab)
+**语音模式（实时识别）：**
+- 进入自动开麦（Web Speech API，zh-CN，continuous 模式）
+- 顶部紧凑 Mic 状态区（🔴脉冲=录音中 / ⚪=停止）+ 单行实时转写
+- 主区域：统一食材确认列表（边说边出现）
+- 每个识别片段实时 POST 到 `/api/ingredients/parse-voice`（带当前列表上下文）
+- AI 智能意图检测：添加（"鸡蛋三个"）/ 修改（"鸡蛋改成五个"）/ 删除（"牛奶不要了"）
+- 保质期自动估算：用户说了日期直接解析，没说按分类默认天数（鸡蛋14天/鲜奶7天/肉类3天等）
 
-- 文本输入框 + 语音输入（Web Speech API，支持中文）
-- AI 解析自然语言为结构化食材数据
-- 解析结果可编辑（移动端卡片布局 / 桌面端表格布局）
-- 确认后 `bulkAddIngredients` 批量保存
-- 离开页面自动停止麦克风（`useEffect` cleanup）
+**统一食材确认列表组件（`IngredientConfirmList`）：**
+- 所有模式共享，checkbox + 名称/数量/单位/分类/保质期 可编辑 + 删除
+- 底部"全部入库 (N)"按钮，只保存勾选项
+- 入库去重合并：同名食材累加数量 + 取较晚保质期（`normalizeIngredientName` 标准化匹配）
 
 ### 3.8 食材分析
 
@@ -417,27 +450,17 @@ AI 对话式菜谱推荐（主接口）。
 
 注：`ingredients` 兼容旧版 `string[]` 格式（自动转换为对象），`tasteProfile` 可选。
 
-**响应：**
-```json
-{
-  "reply": "看到你的番茄快过期了，正好配鸡胸肉来几道～",
-  "recipes": [
-    {
-      "title": "番茄鸡胸肉",
-      "description": "...",
-      "cuisine": "中式",
-      "servings": 2,
-      "prepTimeMinutes": 10,
-      "cookTimeMinutes": 20,
-      "difficulty": "easy",
-      "ingredients": [{ "name": "鸡胸肉", "amount": "500g", "unit": "" }],
-      "steps": [{ "order": 1, "instruction": "...", "durationSeconds": 300, "tip": "..." }],
-      "nutritionEstimate": { "calories": 350, "proteinG": 40, "carbsG": 10, "fatG": 8 },
-      "tags": ["消耗临期食材"]
-    }
-  ]
-}
+**响应（SSE 流 `text/event-stream`）：**
 ```
+data: {"type":"text","content":"看到你冰箱有鸡胸肉和番茄，"}
+data: {"type":"text","content":"给你推荐几道菜～"}
+data: {"type":"recipes","recipes":[{"title":"番茄鸡胸肉","difficulty":"easy",...}]}
+data: [DONE]
+```
+
+- chat 意图：只有 `text` 事件
+- recipe 意图：`text` 事件（过渡文字）+ `recipes` 事件（完整菜谱 JSON）
+- `error` 事件：AI 调用失败时发送错误信息
 
 ### 5.2 `POST /api/recipes/save`
 
@@ -445,7 +468,29 @@ AI 对话式菜谱推荐（主接口）。
 
 ### 5.3 `POST /api/ingredients/parse`
 
-AI 智能解析自然语言中的食材信息。
+AI 智能解析自然语言中的食材信息（批量文本解析）。
+
+### 5.3.1 `POST /api/ingredients/parse-voice`
+
+语音实时食材解析（带上下文意图检测）。
+
+**请求体：**
+```json
+{
+  "transcript": "鸡蛋三个牛奶不要了",
+  "currentItems": [{"name":"牛奶","quantity":1,"unit":"盒"}]
+}
+```
+
+**响应：**
+```json
+{
+  "actions": [
+    {"type":"add","name":"鸡蛋","quantity":3,"unit":"个","category":"protein","expiry_date":"2026-04-17"},
+    {"type":"remove","name":"牛奶","matchName":"牛奶"}
+  ]
+}
+```
 
 ### 5.4 `POST /api/recipes/generate`
 
@@ -485,6 +530,7 @@ src/lib/ai-service/
 └── prompts/
     ├── recipe-generation.ts     # 菜谱生成 prompt 模板
     ├── chat-recipe.ts           # 对话式菜谱 prompt（含用户偏好 + 临期食材）
+    ├── chat-reply.ts            # 闲聊 prompt（蛋厨人设，无菜谱规则）
     └── ingredient-analysis.ts   # 食材分析 prompt 模板
 ```
 
@@ -527,7 +573,6 @@ src/lib/taste/
 
 ### 7.1 菜谱生成增强
 
-- 生成结果改为流式结构化输出（当前为非流式 `generateObject`）
 - 口味画像同义词映射（"西红柿"→"番茄"）
 
 ### 7.2 食材管理增强
@@ -568,12 +613,13 @@ src/
 │   │   │                        # MessageBubble、ChatInput、RecipeDetailSheet、
 │   │   │                        # CookingMode
 │   │   ├── kitchen/             # 食材管理
-│   │   │   ├── page.tsx         # 食材 Grid 网格
+│   │   │   ├── page.tsx         # 食材 Grid 网格 + 批量管理
 │   │   │   ├── loading.tsx      # 骨架屏
-│   │   │   ├── actions.ts       # CRUD Server Actions + 图标生成触发
-│   │   │   ├── add/page.tsx     # 添加食材（手动/智能 Tab）
+│   │   │   ├── actions.ts       # CRUD + 批量删除 + 去重合并入库
+│   │   │   ├── add/page.tsx     # 添加食材（模式选择 → 手动/语音）
 │   │   │   └── _components/     # IngredientItem、IngredientListClient、
-│   │   │                        # EditIngredientSheet、AddForm、SmartInput
+│   │   │                        # EditIngredientSheet、AddForm、VoiceInput、
+│   │   │                        # ModeSelector、IngredientConfirmList、constants
 │   │   ├── recipes/             # 收藏菜谱
 │   │   │   ├── page.tsx         # 收藏列表
 │   │   │   ├── loading.tsx      # 骨架屏
@@ -585,9 +631,11 @@ src/
 │   │       ├── taste-actions.ts # 口味信号 CRUD（addTasteSignal/delete/clearAll）
 │   │       └── _components/     # SettingsForm、TasteProfileSection
 │   ├── api/                     # API 路由
-│   │   ├── chat/                # AI 对话菜谱推荐
+│   │   ├── chat/                # AI 对话（意图分类 + SSE 流式）
 │   │   ├── taste/extract/       # 口味信号异步提取
-│   │   ├── ingredients/parse/   # 食材智能解析
+│   │   ├── ingredients/
+│   │   │   ├── parse/           # 食材文本批量解析
+│   │   │   └── parse-voice/     # 语音实时解析（带意图检测）
 │   │   └── recipes/             # 菜谱生成 + 分析 + 保存
 │   ├── layout.tsx               # 根布局（PWA manifest + theme-color + SW）
 │   └── page.tsx                 # 首页（重定向到 /chat）
