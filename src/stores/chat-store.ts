@@ -13,6 +13,7 @@ interface ChatStore {
   messages: ChatMessage[];
   nextId: number;
   addMessage: (msg: Omit<ChatMessage, "id">) => string;
+  updateMessage: (id: string, updater: (msg: ChatMessage) => Partial<ChatMessage>) => void;
   clearMessages: () => void;
 }
 
@@ -29,6 +30,12 @@ export const useChatStore = create<ChatStore>()(
         }));
         return id;
       },
+      updateMessage: (id, updater) =>
+        set((s) => ({
+          messages: s.messages.map((m) =>
+            m.id === id ? { ...m, ...updater(m) } : m,
+          ),
+        })),
       clearMessages: () => set({ messages: [], nextId: 1 }),
     }),
     {

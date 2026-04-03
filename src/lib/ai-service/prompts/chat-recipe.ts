@@ -65,7 +65,7 @@ function difficultyBlock(level: string | undefined): string {
 
 // ── taste profile block ──────────────────────────────────────
 
-function buildTasteBlock(tp: ChatTasteProfile | undefined, nickname: string): string {
+export function buildTasteBlock(tp: ChatTasteProfile | undefined, nickname: string): string {
   if (!tp || tp.signal_count === 0) {
     return `## 用户口味画像
 还没有积累到口味偏好，可以通过对话慢慢了解。`;

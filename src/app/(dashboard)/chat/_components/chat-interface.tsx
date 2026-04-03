@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Recipe, ChatResponse } from "@/lib/ai-service";
+import type { Recipe } from "@/lib/ai-service";
 import { useChatStore } from "@/stores/chat-store";
 import { PromptCards } from "./prompt-cards";
 import { MessageBubble } from "./message-bubble";
@@ -102,6 +102,8 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
     }
   }, [messages.length]);
 
+  const updateMessage = useChatStore((s) => s.updateMessage);
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
@@ -132,20 +134,56 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
           return;
         }
 
-        const data = (await res.json()) as ChatResponse;
-        addMessage({
-          role: "assistant",
-          content: data.reply,
-          recipes: data.recipes,
-        });
+        // Create empty assistant message, then stream into it
+        const msgId = addMessage({ role: "assistant", content: "" });
+        let fullReply = "";
+
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = line.slice(6);
+            if (payload === "[DONE]") continue;
+
+            try {
+              const event = JSON.parse(payload);
+              if (event.type === "text") {
+                fullReply += event.content;
+                updateMessage(msgId, () => ({ content: fullReply }));
+                scrollToBottom();
+              } else if (event.type === "recipes") {
+                updateMessage(msgId, () => ({ recipes: event.recipes }));
+                scrollToBottom();
+              } else if (event.type === "error") {
+                updateMessage(msgId, () => ({
+                  content: fullReply || event.message || "生成失败，请重试",
+                }));
+              }
+            } catch {
+              // skip malformed events
+            }
+          }
+        }
 
         // Fire-and-forget: extract taste signals from this exchange
-        const conversation = `用户: ${text.trim()}\n助手: ${data.reply}`;
-        void fetch("/api/taste/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversation }),
-        }).catch(() => {});
+        if (fullReply) {
+          const conversation = `用户: ${text.trim()}\n助手: ${fullReply}`;
+          void fetch("/api/taste/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversation }),
+          }).catch(() => {});
+        }
       } catch {
         addMessage({ role: "assistant", content: "网络错误，请重试" });
       } finally {
@@ -153,7 +191,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
         scrollToBottom();
       }
     },
-    [chatIngredients, isLoading, scrollToBottom, userPreferences, addMessage]
+    [chatIngredients, isLoading, scrollToBottom, userPreferences, addMessage, updateMessage]
   );
 
   const handleSend = useCallback(() => {
