@@ -225,44 +225,25 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
 }
 
 /**
- * Generate a cover image for a recipe, store it in Supabase Storage,
- * and update the recipe row with the cover URL. Fully self-contained.
+ * Generate a cover image for a saved recipe — delegates to the shared cover
+ * library (`recipe_covers`) so same-title recipes across users reuse one image
+ * and transient Imagen failures don't block future saves. Updates the
+ * `recipes.cover_image_url` column as a side-effect.
  */
 export async function generateAndStoreCover(
   recipeId: string,
   dishName: string
 ): Promise<void> {
-  const apiKey = resolveGeminiKey();
-  if (!apiKey) {
-    console.warn("[cover-gen] GEMINI_API_KEY / GOOGLE_API_KEY not set, skipping");
-    return;
-  }
+  const coverUrl = await getOrCreateSharedCover(dishName);
+  if (!coverUrl) return;
 
   try {
-    const buffer = await generateImage(apiKey, buildCoverPrompt(dishName), "1:1");
-    if (!buffer) return;
-
     const admin = createAdminClient();
-    const filePath = `${recipeId}.png`;
-
-    const { error: uploadError } = await admin.storage
-      .from("recipe-covers")
-      .upload(filePath, buffer, { contentType: "image/png", upsert: true });
-
-    if (uploadError) {
-      console.error("[cover-gen] Storage upload error:", uploadError.message);
-      return;
-    }
-
-    const { data: { publicUrl } } = admin.storage.from("recipe-covers").getPublicUrl(filePath);
-
     await admin
       .from("recipes")
-      .update({ cover_image_url: publicUrl })
+      .update({ cover_image_url: coverUrl })
       .eq("id", recipeId);
-
-    console.log("[cover-gen] OK:", dishName, "->", publicUrl);
   } catch (err) {
-    console.error("[cover-gen] Unexpected error:", err instanceof Error ? err.message : err);
+    console.error("[cover-gen] Failed to update recipe row:", err instanceof Error ? err.message : err);
   }
 }
