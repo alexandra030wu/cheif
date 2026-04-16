@@ -405,12 +405,25 @@ AI 生成的菜谱。
 | recipe_id | uuid (FK → recipes) | 菜谱 ID，级联删除，NOT NULL |
 | saved_at | timestamptz | 收藏时间 |
 
+### 4.7 recipe_covers
+
+共享菜谱封面库，同名菜谱（按归一化标题）只生成一次封面，所有用户共享。镜像 ingredient_icons 设计。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | uuid (PK) | 自动生成 |
+| title | text | 菜谱原始标题，NOT NULL |
+| title_normalized | text | 标准化标题（trim + lowercase + 去空格去括号），UNIQUE |
+| cover_url | text | Supabase Storage URL（`shared-{sha256前16}.png`），NOT NULL |
+| created_at | timestamptz | 创建时间 |
+
 ### 4.8 待执行 Migrations
 
 | 文件 | 内容 |
 |------|------|
 | `00006_create_taste_signals.sql` | taste_signals 表 + RLS + profiles.taste_profile 字段 |
 | `00007_create_ingredient_icons.sql` | ingredient_icons 共享表 + 迁移现有图标数据 |
+| `00008_create_recipe_covers.sql` | recipe_covers 共享表 + 从 recipes.cover_image_url 回填 |
 
 ### 4.9 Supabase Storage Buckets
 

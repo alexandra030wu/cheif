@@ -104,6 +104,42 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
 
   const updateMessage = useChatStore((s) => s.updateMessage);
 
+  // Backfill covers for any recipe missing coverImageUrl — covers messages persisted
+  // from before the streaming-cover feature landed, or recipes whose SSE cover event
+  // was dropped. Deduped per-title via a ref to avoid repeat fetches on rerender.
+  const inFlightCovers = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    messages.forEach((msg) => {
+      if (msg.role !== "assistant" || !msg.recipes) return;
+      msg.recipes.forEach((r, idx) => {
+        if (r.coverImageUrl || inFlightCovers.current.has(r.title)) return;
+        inFlightCovers.current.add(r.title);
+        fetch("/api/recipes/cover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: r.title }),
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            const url = data?.coverImageUrl;
+            if (!url) return;
+            updateMessage(msg.id, (m) => {
+              if (!m.recipes) return {};
+              const target = m.recipes[idx];
+              if (!target || target.title !== r.title) return {};
+              const next = m.recipes.slice();
+              next[idx] = { ...target, coverImageUrl: url };
+              return { recipes: next };
+            });
+          })
+          .catch(() => {})
+          .finally(() => {
+            inFlightCovers.current.delete(r.title);
+          });
+      });
+    });
+  }, [messages, updateMessage]);
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
@@ -219,6 +255,21 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
   const handleRecipeTap = useCallback((recipe: Recipe) => {
     setSelectedRecipe(recipe);
   }, []);
+
+  // When the store backfills a cover for the currently-open recipe, re-sync so
+  // the detail sheet picks up the image without the user having to close/reopen.
+  useEffect(() => {
+    if (!selectedRecipe || selectedRecipe.coverImageUrl) return;
+    for (const msg of messages) {
+      const match = msg.recipes?.find(
+        (r) => r.title === selectedRecipe.title && r.coverImageUrl
+      );
+      if (match) {
+        setSelectedRecipe(match);
+        return;
+      }
+    }
+  }, [messages, selectedRecipe]);
 
   const isEmpty = messages.length === 0;
 

@@ -34,6 +34,28 @@ export interface Database {
         };
         Relationships: [];
       };
+      recipe_covers: {
+        Row: {
+          id: string;
+          title: string;
+          title_normalized: string;
+          cover_url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          title_normalized: string;
+          cover_url: string;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          title_normalized?: string;
+          cover_url?: string;
+        };
+        Relationships: [];
+      };
       ingredients: {
         Row: {
           id: string;

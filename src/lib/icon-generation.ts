@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createAdminClient } from "./supabase/admin";
 
 const GEMINI_ENDPOINT =
@@ -16,17 +17,28 @@ async function generateImage(
   prompt: string,
   aspectRatio = "1:1"
 ): Promise<Buffer | null> {
-  const res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt }],
-      parameters: { sampleCount: 1, aspectRatio },
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instances: [{ prompt }],
+        parameters: { sampleCount: 1, aspectRatio },
+      }),
+    });
+  } catch (err) {
+    console.warn("[imagen] fetch failed:", err instanceof Error ? err.message : err);
+    return null;
+  }
 
   if (!res.ok) {
-    console.error("[imagen] API error:", res.status, await res.text().catch(() => ""));
+    // 429 is rate-limit — expected under burst, keep log quiet
+    if (res.status === 429) {
+      console.warn("[imagen] rate-limited (429), skipping this cover");
+    } else {
+      console.error("[imagen] API error:", res.status, await res.text().catch(() => ""));
+    }
     return null;
   }
 
@@ -139,30 +151,37 @@ export async function generateAndStoreIcon(
 
 /**
  * Get or create a shared cover image for a recipe title.
- * Returns the public URL from `recipe-covers` bucket, generating + uploading if missing.
- * Title-based filename enables cross-user sharing for common dishes.
- * Does NOT require a saved recipe row — safe to use for chat-generated recipes.
+ * Mirrors the ingredient-icon pattern: DB lookup first (~10ms on cache hit),
+ * Imagen generation + Storage upload + DB insert on miss. Persistent across
+ * sessions — same title is never regenerated. Safe for chat-generated recipes
+ * (no saved recipe row required).
  */
 export async function getOrCreateSharedCover(title: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-
   const normalized = normalizeIngredientName(title);
   if (!normalized) return null;
 
   const admin = createAdminClient();
-  const filePath = `shared-${normalized}.png`;
-  const {
-    data: { publicUrl },
-  } = admin.storage.from("recipe-covers").getPublicUrl(filePath);
 
-  // Fast cache check: HEAD the public URL. Supabase returns 200 if object exists.
-  try {
-    const head = await fetch(publicUrl, { method: "HEAD" });
-    if (head.ok) return publicUrl;
-  } catch {
-    // fall through to generation
+  // 1. DB lookup — fast cache hit
+  const { data: existing } = await admin
+    .from("recipe_covers")
+    .select("cover_url")
+    .eq("title_normalized", normalized)
+    .maybeSingle();
+
+  if (existing?.cover_url) return existing.cover_url;
+
+  // 2. Cache miss — generate
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("[cover-gen shared] GEMINI_API_KEY not set, skipping");
+    return null;
   }
+
+  // Supabase Storage keys must be ASCII-safe — Chinese titles break uploads with
+  // "Invalid key". Hash the normalized title to a stable 16-char hex key.
+  const titleHash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
+  const filePath = `shared-${titleHash}.png`;
 
   try {
     const buffer = await generateImage(apiKey, buildCoverPrompt(title), "1:1");
@@ -176,6 +195,18 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
       console.error("[cover-gen shared] Storage upload error:", uploadError.message);
       return null;
     }
+
+    const {
+      data: { publicUrl },
+    } = admin.storage.from("recipe-covers").getPublicUrl(filePath);
+
+    // 3. Insert into shared library (upsert defensively in case a concurrent request won the race)
+    await admin
+      .from("recipe_covers")
+      .upsert(
+        { title, title_normalized: normalized, cover_url: publicUrl },
+        { onConflict: "title_normalized" }
+      );
 
     return publicUrl;
   } catch (err) {
