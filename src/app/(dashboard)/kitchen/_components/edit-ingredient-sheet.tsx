@@ -183,7 +183,7 @@ export function EditIngredientSheet({ ingredient, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto px-5 pb-4">
+        <div className="overflow-y-auto overscroll-contain touch-scroll px-5 pb-4">
           {/* Hero image */}
           <div className="flex justify-center py-4">
             <div className="w-40 h-40 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden shadow-sm">

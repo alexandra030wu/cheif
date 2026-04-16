@@ -150,7 +150,10 @@ export function CookingMode({ recipe, onClose }: Props) {
       {...swipe}
     >
       {/* Progress bar */}
-      <div className="shrink-0">
+      <div
+        className="shrink-0"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="h-1 bg-gray-800">
           <div
             className="h-full bg-white transition-all duration-300 ease-out"
