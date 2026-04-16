@@ -164,6 +164,17 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
               } else if (event.type === "recipes") {
                 updateMessage(msgId, () => ({ recipes: event.recipes }));
                 scrollToBottom();
+              } else if (event.type === "cover") {
+                // Cover image arrived for a specific recipe — merge into existing array
+                updateMessage(msgId, (m) => {
+                  if (!m.recipes) return {};
+                  const idx: number = event.index;
+                  const target = m.recipes[idx];
+                  if (!target || target.title !== event.title) return {};
+                  const next = m.recipes.slice();
+                  next[idx] = { ...target, coverImageUrl: event.coverImageUrl };
+                  return { recipes: next };
+                });
               } else if (event.type === "error") {
                 updateMessage(msgId, () => ({
                   content: fullReply || event.message || "生成失败，请重试",

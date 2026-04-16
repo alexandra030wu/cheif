@@ -4,6 +4,7 @@ import { ChatResponseSchema } from "@/lib/ai-service/types";
 import { buildChatRecipePrompt } from "@/lib/ai-service/prompts/chat-recipe";
 import { buildChatReplyPrompt } from "@/lib/ai-service/prompts/chat-reply";
 import { ChatRequestSchema } from "@/lib/validators/chat";
+import { getOrCreateSharedCover } from "@/lib/icon-generation";
 
 export const maxDuration = 60;
 
@@ -92,6 +93,21 @@ export async function POST(request: Request) {
           });
 
           sseSend(controller, { type: "recipes", recipes: object.recipes });
+
+          // Step 3: Generate cover images in parallel and stream per-recipe cover events
+          // as each completes. Recipes already render on the client; covers fade in.
+          await Promise.allSettled(
+            object.recipes.map(async (r, index) => {
+              try {
+                const coverImageUrl = await getOrCreateSharedCover(r.title);
+                if (coverImageUrl) {
+                  sseSend(controller, { type: "cover", index, title: r.title, coverImageUrl });
+                }
+              } catch (err) {
+                console.warn("[/api/chat] cover generation failed for", r.title, err);
+              }
+            })
+          );
         }
       } catch (err) {
         console.error("[/api/chat] STREAM ERROR:", err);

@@ -138,6 +138,53 @@ export async function generateAndStoreIcon(
 }
 
 /**
+ * Get or create a shared cover image for a recipe title.
+ * Returns the public URL from `recipe-covers` bucket, generating + uploading if missing.
+ * Title-based filename enables cross-user sharing for common dishes.
+ * Does NOT require a saved recipe row — safe to use for chat-generated recipes.
+ */
+export async function getOrCreateSharedCover(title: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const normalized = normalizeIngredientName(title);
+  if (!normalized) return null;
+
+  const admin = createAdminClient();
+  const filePath = `shared-${normalized}.png`;
+  const {
+    data: { publicUrl },
+  } = admin.storage.from("recipe-covers").getPublicUrl(filePath);
+
+  // Fast cache check: HEAD the public URL. Supabase returns 200 if object exists.
+  try {
+    const head = await fetch(publicUrl, { method: "HEAD" });
+    if (head.ok) return publicUrl;
+  } catch {
+    // fall through to generation
+  }
+
+  try {
+    const buffer = await generateImage(apiKey, buildCoverPrompt(title), "1:1");
+    if (!buffer) return null;
+
+    const { error: uploadError } = await admin.storage
+      .from("recipe-covers")
+      .upload(filePath, buffer, { contentType: "image/png", upsert: true });
+
+    if (uploadError) {
+      console.error("[cover-gen shared] Storage upload error:", uploadError.message);
+      return null;
+    }
+
+    return publicUrl;
+  } catch (err) {
+    console.error("[cover-gen shared] Unexpected error:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
  * Generate a cover image for a recipe, store it in Supabase Storage,
  * and update the recipe row with the cover URL. Fully self-contained.
  */
