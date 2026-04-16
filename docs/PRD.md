@@ -1,6 +1,6 @@
 # Cheif — 智能厨房助手 PRD
 
-> 最后更新：2026-04-03
+> 最后更新：2026-04-17
 
 ---
 
@@ -116,8 +116,9 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 
 - **蛋厨人设（dan.chef）**：温暖有个性的烹饪助手，说话自然、有趣、偶尔调皮
 - 返回 2-3 道结构化菜谱卡片，风格差异化（快手 + 稍复杂 + 创意）
-- 每张卡片：封面图（AI 生成或渐变占位）、菜名、时间、难度 badge、食材摘要
+- 每张卡片：封面图（AI 生成，命中共享库秒回；未命中渐变占位，生成完后渐进填入）、菜名、时间、难度 badge、食材摘要
 - 临期食材标签：使用了临期食材的菜谱显示「🔥 消耗临期食材」徽章
+- 聊天卡片和收藏列表卡片样式统一，共享同一封面 URL
 
 **Prompt 注入内容：**
 - 用户画像：昵称、厨艺水平、默认份数、饮食偏好、过敏原、常用厨具
@@ -185,12 +186,20 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 支持删除收藏（`deleteSavedRecipe` Server Action，同时删除 recipes + saved_recipes 记录）
 - 空状态引导去聊天页生成菜谱
 
-### 3.6 菜谱封面图
+### 3.6 菜谱封面图（共享封面库）
 
-- 收藏菜谱时自动调用 Gemini Imagen 生成封面（fire-and-forget）
-- Prompt：`"A beautiful plated dish of [菜名], top-down food photography, natural lighting, white plate, restaurant quality, appetizing"`
-- 存储到 Supabase Storage `recipe-covers` bucket
-- 菜谱卡片顶部展示封面图，无图时显示渐变色占位
+对齐食材图标的共享库模式，封面图按标题去重全局复用，避免重复调用 Imagen。
+
+- **共享库**：`recipe_covers` 表，按归一化标题（`title_normalized`）UNIQUE，所有用户共享；`getOrCreateSharedCover` DB 先查命中即返回（~10ms），未命中走 Imagen 生成
+- **触发时机**：
+  - 聊天生成菜谱时，`/api/chat` 在 `recipes` 事件后并行生成每张封面，通过 SSE `cover` 事件流式推送（`{index, title, coverImageUrl}`）
+  - 聊天前端挂载时 `useEffect` 扫描历史消息，发现缺封面的 recipe 调 `/api/recipes/cover` 补拉（兜底历史消息 / SSE 丢包），同一 title 通过 Ref Set 去重
+  - 收藏菜谱时 `generateAndStoreCover(recipeId, title)` 写入 `recipes.cover_image_url`
+- **Prompt**：`"A beautiful plated dish of [菜名], top-down food photography, natural lighting, white plate, restaurant quality, appetizing, high definition"`
+- **Storage**：`recipe-covers` bucket；共享库文件名用 `shared-{sha256(normalized_title)前16}.png`（ASCII 安全，兼容中文菜名）；收藏路径用 `{recipeId}.png`
+- **前端展示**：首页聊天卡片、收藏列表、详情页顶部 header 全部共用同一封面 URL；无图时渐变色占位
+- **429 优雅降级**：Imagen 限额触发时日志降 warn 不污染 error，UI 保持渐变直到下次 useEffect 补拉成功
+- **详情页同步**：当前打开的菜谱由 store 补上封面后，`selectedRecipe` 自动同步（不需要关闭重开）
 
 ### 3.7 食材管理
 
@@ -298,6 +307,12 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - `React.lazy`（SmartInput 按需加载）
 - `useMemo` / `useCallback` 避免不必要计算和重渲染
 - `revalidatePath` 精准缓存失效
+
+### 3.12 H5 体验优化
+
+- **Safe-area 适配**：菜谱详情页、Cooking Mode 顶部 header 使用 `env(safe-area-inset-top)` padding，iOS 刘海 / Dynamic Island / 状态栏下返回按钮不被遮挡
+- **iOS 动量滚动**：全局 `.touch-scroll` 工具类（`-webkit-overflow-scrolling: touch` + `overscroll-behavior: contain`）应用到菜谱详情、食材详情滚动容器，解决滚动卡顿和 body 橡皮筋穿透
+- **返回按钮可达性**：所有全屏 Sheet 顶部左上角统一返回按钮（`p-2 -m-2` 扩大点击区），`aria-label="返回"` 支持无障碍
 
 ---
 
@@ -479,6 +494,24 @@ data: [DONE]
 
 收藏菜谱。自动触发封面图生成。
 
+### 5.2.1 `POST /api/recipes/cover`
+
+共享封面库接口。用于聊天前端为缺封面的菜谱补拉（历史消息 / SSE 丢包的兜底）。
+
+**请求体：**
+```json
+{ "title": "番茄炒蛋" }
+```
+
+**响应：**
+```json
+{ "coverImageUrl": "https://xxx.supabase.co/storage/v1/object/public/recipe-covers/shared-xxxx.png" }
+```
+
+- DB 命中：~10-50ms
+- 未命中：~3-15s（Imagen 生成 + Storage 上传 + DB insert）
+- Imagen 429 / 网络错误：返回 `{ coverImageUrl: null }`，前端保持渐变占位
+
 ### 5.3 `POST /api/ingredients/parse`
 
 AI 智能解析自然语言中的食材信息（批量文本解析）。
@@ -573,11 +606,12 @@ src/lib/taste/
 
 `src/lib/icon-generation.ts`：
 
-- `getOrCreateSharedIcon(ingredientId, name)` — 查共享库 → 命中返回 / 未命中生成+缓存
+- `getOrCreateSharedIcon(ingredientId, name)` — 查 `ingredient_icons` 共享库 → 命中返回 / 未命中生成+缓存
+- `getOrCreateSharedCover(title)` — 查 `recipe_covers` 共享库 → 命中返回 / 未命中 Imagen 生成 + Storage 上传 + DB insert；Storage 文件名用 sha256 哈希（ASCII 安全，支持中文标题）
 - `generateAndStoreIcon(ingredientId, name)` — 旧接口，已重定向到共享库流程
-- `generateAndStoreCover(recipeId, dishName)` — 菜谱封面生成
-- `normalizeIngredientName(name)` — 食材名称标准化（去空格/括号/小写）
-- 共享 `generateImage()` 调用 Gemini Imagen 4.0 Fast API
+- `generateAndStoreCover(recipeId, dishName)` — 收藏时的菜谱封面生成（写入 `recipes.cover_image_url`）
+- `normalizeIngredientName(name)` — 名称标准化（trim + lowercase + 去空格去括号），食材和菜谱共用
+- 共享 `generateImage()` 调用 Gemini Imagen 4.0 Fast API，429 返回 null 不抛错
 - 使用 `src/lib/supabase/admin.ts`（service role client）上传 Storage
 
 ---
@@ -644,18 +678,18 @@ src/
 │   │       ├── taste-actions.ts # 口味信号 CRUD（addTasteSignal/delete/clearAll）
 │   │       └── _components/     # SettingsForm、TasteProfileSection
 │   ├── api/                     # API 路由
-│   │   ├── chat/                # AI 对话（意图分类 + SSE 流式）
+│   │   ├── chat/                # AI 对话（意图分类 + SSE 流式 + 封面并行生成推送）
 │   │   ├── taste/extract/       # 口味信号异步提取
 │   │   ├── ingredients/
 │   │   │   ├── parse/           # 食材文本批量解析
 │   │   │   └── parse-voice/     # 语音实时解析（带意图检测）
-│   │   └── recipes/             # 菜谱生成 + 分析 + 保存
+│   │   └── recipes/             # 菜谱生成 / 分析 / 保存 / 共享封面（cover）
 │   ├── layout.tsx               # 根布局（PWA manifest + theme-color + SW）
 │   └── page.tsx                 # 首页（重定向到 /chat）
 ├── lib/
 │   ├── ai-service/              # AI 抽象层（types / registry / prompts）
 │   ├── taste/                   # 口味学习模块（types / extract / aggregate）
-│   ├── icon-generation.ts       # Gemini Imagen 图标/封面生成 + 共享图标库
+│   ├── icon-generation.ts       # Gemini Imagen 图标/封面生成 + 共享图标库 + 共享封面库
 │   ├── supabase/                # Supabase 客户端（browser / server / admin / types）
 │   ├── validators/              # Zod 验证 Schema（chat / ingredient / recipe）
 │   └── utils.ts                 # 工具函数（cn / formatDate）
