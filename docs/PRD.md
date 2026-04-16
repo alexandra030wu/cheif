@@ -184,7 +184,33 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 无结果空状态 + "清除所有筛选"按钮
 - 点击卡片打开详情 Sheet（复用聊天页组件，`alreadySaved` 模式）
 - 支持删除收藏（`deleteSavedRecipe` Server Action，同时删除 recipes + saved_recipes 记录）
+- 顶部右上角 **「+ 导入菜谱」按钮**，空态也露一份
 - 空状态引导去聊天页生成菜谱
+
+### 3.5.1 菜谱导入（截图 / 粘贴文字）
+
+让用户把抖音、小红书、微信群里看到的菜谱沉淀进自己的收藏库，支持图片和文字两种输入，AI 提取结构化后弹预览确认入库。
+
+- **两种输入模式**（tabs 切换）：
+  - 📷 **截图**：`<input type="file" accept="image/*">`，FileReader 转 base64，前端检查大小 ≤ 4MB（Vercel payload 限制），预览缩略图可撤销
+  - 📝 **粘贴文字**：textarea + 剪贴板一键粘贴按钮，字数 20-8000
+- **提取流程**：
+  - POST `/api/recipes/import`，根据 mode 分发到视觉或纯文本 `generateObject`
+  - Schema 是 `ImportedRecipeSchema`（所有字段 optional，不含营养估算——LLM 瞎编营养会误导）
+  - 复用现有 `AI_PROVIDER` 配置（OpenAI gpt-4o / Anthropic claude-sonnet-4-* 原生视觉；Ollama 图片模式会 400）
+  - Prompt 硬要求"只填入图/文中直接出现的字段，不确定就留空"
+- **预览可编辑 sheet**（三阶段 `input → extracting → preview`）：
+  - 提取完成后弹出全屏 sheet，字段用 placeholder 提示哪些没提取到
+  - 食材：每行 name/amount/unit 分列 + 单独删除；支持 "+ 添加"
+  - 步骤：每步独立卡片，支持上移/下移/删除 + 手动添加
+  - 标签：逗号分隔
+  - 顶部黄色提示条提醒用户复查
+- **保存**：
+  - 点"保存到菜谱库"→ 客户端 `normalizeImportedRecipe()` 合并默认值（标题为空填"未命名菜谱"、难度默认 `medium` 等）
+  - POST `/api/recipes/save`（完全复用现有接口）
+  - 自动触发共享封面库生成 + 口味信号
+  - `router.refresh()` 刷新列表
+- **不存原图**：提取完即丢，不占 Storage，不涉及隐私
 
 ### 3.6 菜谱封面图（共享封面库）
 
@@ -512,6 +538,29 @@ data: [DONE]
 - 未命中：~3-15s（Imagen 生成 + Storage 上传 + DB insert）
 - Imagen 429 / 网络错误：返回 `{ coverImageUrl: null }`，前端保持渐变占位
 
+### 5.2.2 `POST /api/recipes/import`
+
+外部菜谱（截图 / 粘贴文字）结构化提取。返回部分填充的 `ImportedRecipe`，由前端做 normalize + 预览编辑后再调 `/api/recipes/save`。
+
+**请求体**（discriminated union）：
+```json
+// 图片模式
+{ "mode": "image", "imageBase64": "...", "mimeType": "image/jpeg" }
+
+// 文字模式
+{ "mode": "text", "text": "今日份晚餐 番茄炒蛋..." }
+```
+
+**响应：**
+```json
+{ "recipe": { "title": "番茄炒蛋", "ingredients": [...], "steps": [...] } }
+```
+
+- `runtime = "nodejs"`、`maxDuration = 60`
+- 图片 base64 需 ≤ 4MB（前端预检查）；文字长度 20-8000
+- Ollama provider 在图片模式下 400，错误信息明确提示切 provider
+- Schema `ImportedRecipeSchema` 所有字段 optional，AI 只填能直接识别的；空字段由客户端 `normalizeImportedRecipe()` 补默认值后再保存
+
 ### 5.3 `POST /api/ingredients/parse`
 
 AI 智能解析自然语言中的食材信息（批量文本解析）。
@@ -671,7 +720,8 @@ src/
 │   │   │   ├── page.tsx         # 收藏列表
 │   │   │   ├── loading.tsx      # 骨架屏
 │   │   │   ├── actions.ts       # deleteSavedRecipe
-│   │   │   └── _components/     # SavedRecipeList、DeleteRecipeButton
+│   │   │   └── _components/     # SavedRecipeList、DeleteRecipeButton、
+│   │   │                        # RecipeImportSheet、ImportRecipeButton
 │   │   └── settings/            # 个人设置
 │   │       ├── page.tsx         # 设置页（含口味画像区域）
 │   │       ├── actions.ts       # saveProfile
@@ -683,7 +733,7 @@ src/
 │   │   ├── ingredients/
 │   │   │   ├── parse/           # 食材文本批量解析
 │   │   │   └── parse-voice/     # 语音实时解析（带意图检测）
-│   │   └── recipes/             # 菜谱生成 / 分析 / 保存 / 共享封面（cover）
+│   │   └── recipes/             # 菜谱生成 / 分析 / 保存 / 共享封面 / 导入（import）
 │   ├── layout.tsx               # 根布局（PWA manifest + theme-color + SW）
 │   └── page.tsx                 # 首页（重定向到 /chat）
 ├── lib/
