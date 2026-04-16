@@ -19,6 +19,8 @@ async function generateImage(
 ): Promise<Buffer | null> {
   let res: Response;
   try {
+    // 25s hard timeout — below Vercel Hobby 60s function limit so errors surface in
+    // logs instead of the whole function being killed silently.
     res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -26,6 +28,7 @@ async function generateImage(
         instances: [{ prompt }],
         parameters: { sampleCount: 1, aspectRatio },
       }),
+      signal: AbortSignal.timeout(25000),
     });
   } catch (err) {
     console.warn("[imagen] fetch failed:", err instanceof Error ? err.message : err);
