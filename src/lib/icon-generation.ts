@@ -4,6 +4,12 @@ import { createAdminClient } from "./supabase/admin";
 const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict";
 
+// Accept either env var name — `GOOGLE_API_KEY` is Google's own convention,
+// `GEMINI_API_KEY` is what we documented first. Value is the same API key.
+function resolveGeminiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+}
+
 function buildIconPrompt(name: string): string {
   return `A realistic food icon of exactly ${name}, on a pure white background, centered, no text, no shadow, product photography style, high definition`;
 }
@@ -96,9 +102,9 @@ export async function getOrCreateSharedIcon(
   }
 
   // 2. Cache miss — generate new icon
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = resolveGeminiKey();
   if (!apiKey) {
-    console.warn("[icon-gen] GEMINI_API_KEY not set, skipping");
+    console.warn("[icon-gen] GEMINI_API_KEY / GOOGLE_API_KEY not set, skipping");
     return;
   }
 
@@ -175,9 +181,9 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
   if (existing?.cover_url) return existing.cover_url;
 
   // 2. Cache miss — generate
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = resolveGeminiKey();
   if (!apiKey) {
-    console.warn("[cover-gen shared] GEMINI_API_KEY not set, skipping");
+    console.warn("[cover-gen shared] GEMINI_API_KEY / GOOGLE_API_KEY not set, skipping");
     return null;
   }
 
@@ -226,9 +232,9 @@ export async function generateAndStoreCover(
   recipeId: string,
   dishName: string
 ): Promise<void> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = resolveGeminiKey();
   if (!apiKey) {
-    console.warn("[cover-gen] GEMINI_API_KEY not set, skipping");
+    console.warn("[cover-gen] GEMINI_API_KEY / GOOGLE_API_KEY not set, skipping");
     return;
   }
 

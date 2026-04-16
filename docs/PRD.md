@@ -50,7 +50,7 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 | `OPENAI_API_KEY` | OpenAI API 密钥 |
 | `ANTHROPIC_API_KEY` | Anthropic API 密钥 |
 | `OLLAMA_BASE_URL` | Ollama 服务地址（默认 `http://localhost:11434/v1`） |
-| `GEMINI_API_KEY` | Google Gemini API 密钥（Imagen 图像生成） |
+| `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Google Gemini API 密钥（Imagen 图像生成），两个名字都兼容 |
 | `HTTPS_PROXY` | HTTP 代理地址（可选，用于 Anthropic） |
 
 ---
