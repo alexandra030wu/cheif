@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import type { AIProviderConfig, AIProviderID } from "./types";
 
 function buildProxiedFetch() {
@@ -46,6 +47,18 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
       });
       return anthropic(config.model);
     }
+    case "deepseek": {
+      // Use @ai-sdk/deepseek (dedicated provider) instead of openai.chat() —
+      // it handles DeepSeek's structured-output quirks (json_object instead
+      // of json_schema response_format) automatically. V4 docs:
+      // https://api-docs.deepseek.com/news/news260424
+      const deepseek = createDeepSeek({
+        apiKey: config.apiKey,
+        baseURL: config.baseURL,
+        fetch: buildProxiedFetch(),
+      });
+      return deepseek(config.model);
+    }
     case "ollama": {
       // Ollama exposes an OpenAI-compatible API
       const ollama = createOpenAI({
@@ -74,6 +87,17 @@ export function resolveProviderConfig(
     anthropic: {
       apiKey: process.env.ANTHROPIC_API_KEY,
       model: "claude-sonnet-4-6",
+    },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      // V4-Flash by default — V4-Pro takes 60-70s on structured outputs
+      // (full recipe schema), which exceeds Vercel's 60s function timeout
+      // and triggers connection resets. Flash is ~5-10x faster and quality
+      // is sufficient for chat/recipe tasks. Pro can be used later when
+      // we add per-user model selection in /settings.
+      // Old deepseek-chat / deepseek-reasoner retire 2026-07-24.
+      model: "deepseek-v4-flash",
+      baseURL: process.env.DEEPSEEK_BASE_URL,
     },
     ollama: {
       model: "llama3",

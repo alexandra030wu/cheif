@@ -38,6 +38,7 @@ export async function extractTasteSignals(
     const cheapModel: Record<string, string> = {
       openai: "gpt-4o-mini",
       anthropic: "claude-haiku-4-5-20251001",
+      deepseek: "deepseek-v4-flash",
       ollama: config.model, // use whatever is configured
     };
 
@@ -55,9 +56,9 @@ export async function extractTasteSignals(
     });
 
     return object.signals;
-  } catch {
+  } catch (err) {
     // Extraction is best-effort, never fail the main flow
-    console.error("[taste] extraction failed, skipping");
+    console.error("[taste] extraction failed:", err instanceof Error ? err.message : err);
     return [];
   }
 }

@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "unset ANTHROPIC_API_KEY ANTHROPIC_BASE_URL OPENAI_API_KEY HTTPS_PROXY HTTP_PROXY https_proxy http_proxy 2>/dev/null; next dev",
+    "dev": "unset ANTHROPIC_API_KEY ANTHROPIC_BASE_URL OPENAI_API_KEY DEEPSEEK_API_KEY DEEPSEEK_BASE_URL HTTPS_PROXY HTTP_PROXY https_proxy http_proxy 2>/dev/null; next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.74",
+    "@ai-sdk/deepseek": "^2.0.32",
     "@ai-sdk/openai": "^3.0.48",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.1",

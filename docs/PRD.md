@@ -46,9 +46,11 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务端管理密钥（图标/封面上传） |
-| `AI_PROVIDER` | AI 提供商选择 (`openai` / `anthropic` / `ollama`) |
+| `AI_PROVIDER` | AI 提供商选择 (`openai` / `anthropic` / `deepseek` / `ollama`) |
 | `OPENAI_API_KEY` | OpenAI API 密钥 |
 | `ANTHROPIC_API_KEY` | Anthropic API 密钥 |
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥（V4 接入，2026-04-24 发布） |
+| `DEEPSEEK_BASE_URL` | DeepSeek API base URL（可选，默认 `https://api.deepseek.com/v1`） |
 | `OLLAMA_BASE_URL` | Ollama 服务地址（默认 `http://localhost:11434/v1`） |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Google Gemini API 密钥（Imagen 图像生成），两个名字都兼容 |
 | `HTTPS_PROXY` | HTTP 代理地址（可选，用于 Anthropic） |
@@ -655,6 +657,15 @@ AI 智能解析自然语言中的食材信息（批量文本解析）。
 ## 6. AI 抽象层设计
 
 位于 `src/lib/ai-service/`，统一封装多个 LLM 提供商。
+
+### 支持的 Provider（通过 `AI_PROVIDER` env 切换）
+
+| Provider | 默认主 model | Cheap model（抽取用） | 备注 |
+|----------|--------------|----------------------|------|
+| `openai` | `gpt-4o` | `gpt-4o-mini` | 走 OpenAI API |
+| `anthropic` | `claude-sonnet-4-6` | `claude-haiku-4-5-20251001` | baseURL 硬编码 `/v1`，避开 ANTHROPIC_BASE_URL 污染 |
+| `deepseek` | `deepseek-v4-flash` | `deepseek-v4-flash` | 用 `@ai-sdk/deepseek`（dedicated provider）。Flash 当默认主 model 因为 V4-Pro 生成结构化菜谱要 60-70s 超 Vercel 60s timeout；Pro 留给后续用户切换 UI。旧 `deepseek-chat` / `deepseek-reasoner` 2026-07-24 下线 |
+| `ollama` | `llama3` | 同主 model | 本地 OpenAI 兼容 |
 
 ### 架构
 

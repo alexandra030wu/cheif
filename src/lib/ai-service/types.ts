@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ---------- Provider configuration ----------
 
-export type AIProviderID = "openai" | "anthropic" | "ollama";
+export type AIProviderID = "openai" | "anthropic" | "deepseek" | "ollama";
 
 export interface AIProviderConfig {
   id: AIProviderID;

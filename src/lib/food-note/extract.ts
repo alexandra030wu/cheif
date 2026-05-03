@@ -104,6 +104,7 @@ export async function extractFoodNotes(
     const cheapModel: Record<string, string> = {
       openai: "gpt-4o-mini",
       anthropic: "claude-haiku-4-5-20251001",
+      deepseek: "deepseek-v4-flash",
       ollama: config.model,
     };
 
@@ -154,8 +155,8 @@ export async function extractFoodNotes(
     }
 
     return candidates;
-  } catch {
-    console.error("[food-note] extraction failed, skipping");
+  } catch (err) {
+    console.error("[food-note] extraction failed:", err instanceof Error ? err.message : err);
     return [];
   }
 }
