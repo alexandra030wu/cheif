@@ -33,11 +33,19 @@ export const TasteProfileSchema = z.object({
   last_updated: z.string(),
 }).optional();
 
+export const ChatHistoryMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+});
+
 export const ChatRequestSchema = z.object({
   message: z.string().min(1),
   ingredients: z.array(IngredientItemSchema),
   urgentIngredients: z.array(z.string()).optional(), // legacy field, ignored
   timeOfDay: z.enum(["morning", "noon", "evening", "latenight"]),
+  // Recent conversation history (excludes the current `message`). Capped on
+  // the client at ~20 turns to bound prompt size.
+  history: z.array(ChatHistoryMessageSchema).optional().default([]),
   preferences: z
     .object({
       nickname: z.string().optional(),
@@ -50,5 +58,7 @@ export const ChatRequestSchema = z.object({
     .optional(),
   tasteProfile: TasteProfileSchema,
 });
+
+export type ChatHistoryMessage = z.infer<typeof ChatHistoryMessageSchema>;
 
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;

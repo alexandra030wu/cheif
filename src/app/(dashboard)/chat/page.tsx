@@ -1,7 +1,21 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/taste";
+import type { Recipe } from "@/lib/ai-service";
+import type { ChatMessage } from "@/stores/chat-store";
 import { ChatInterface } from "./_components/chat-interface";
+
+// Skip Next.js Router Cache for /chat. Otherwise client-side navigation back
+// to /chat would replay a stale RSC payload (with no messages) and the page
+// would render empty even though the DB has fresh history.
+export const dynamic = "force-dynamic";
+
+// Initial-page fetch window: just today (local date midnight).
+function todayStartIso(): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
 
 async function ChatLoader() {
   const supabase = await createClient();
@@ -24,6 +38,24 @@ async function ChatLoader() {
   } | undefined;
 
   let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
+  let initialMessages: ChatMessage[] = [];
+
+  if (user) {
+    const { data: rawMessages } = await supabase
+      .from("messages")
+      .select("id, role, content, recipes, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", todayStartIso())
+      .order("created_at", { ascending: true });
+
+    initialMessages = (rawMessages ?? []).map((m) => ({
+      id: m.id,
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      recipes: Array.isArray(m.recipes) ? (m.recipes as unknown as Recipe[]) : undefined,
+      createdAt: m.created_at,
+    }));
+  }
 
   if (user) {
     const { data: profile } = await supabase
@@ -52,6 +84,7 @@ async function ChatLoader() {
       ingredients={ingredients ?? []}
       userPreferences={preferences}
       tasteProfile={tasteProfile}
+      initialMessages={initialMessages}
     />
   );
 }

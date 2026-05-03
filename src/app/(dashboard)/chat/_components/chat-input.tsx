@@ -16,6 +16,7 @@ export const ChatInput = memo(function ChatInput({
   disabled,
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const compositionEndAtRef = useRef(0);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -26,11 +27,20 @@ export const ChatInput = memo(function ChatInput({
     }
   }, [value]);
 
+  function handleCompositionEnd() {
+    compositionEndAtRef.current = performance.now();
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      if (value.trim() && !disabled) onSend();
-    }
+    if (e.key !== "Enter" || e.shiftKey) return;
+    if (e.nativeEvent.isComposing) return;
+    // Some IMEs (notably macOS 拼音) fire compositionend immediately before
+    // keydown(Enter) — at that point isComposing is already false, but the
+    // Enter is part of the IME's "commit + newline" gesture, not a send
+    // intent. Swallow Enter for 50ms after compositionend.
+    if (performance.now() - compositionEndAtRef.current < 50) return;
+    e.preventDefault();
+    if (value.trim() && !disabled) onSend();
   }
 
   return (
@@ -42,6 +52,7 @@ export const ChatInput = memo(function ChatInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onCompositionEnd={handleCompositionEnd}
           placeholder="想吃什么？告诉我..."
           disabled={disabled}
           className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-300 focus:bg-white focus:outline-none disabled:opacity-50 transition-colors"

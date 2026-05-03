@@ -218,6 +218,7 @@ export interface ChatRecipeInput {
   message: string;
   ingredients: ChatIngredient[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
   preferences?: {
     nickname?: string;
     dietary_preferences?: string[];

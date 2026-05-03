@@ -51,10 +51,12 @@ export function createAIService(overrides?: Partial<AIProviderConfig>): AIServic
     },
 
     async generateChatRecipes(input: ChatRecipeInput) {
+      const { system, messages } = buildChatRecipePrompt(input);
       const { object } = await generateObject({
         model,
         schema: ChatResponseSchema,
-        prompt: buildChatRecipePrompt(input),
+        system,
+        messages,
         temperature: config.temperature ?? 0.7,
         maxOutputTokens: config.maxTokens ?? 4096,
       });

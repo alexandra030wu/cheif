@@ -36,8 +36,12 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
       return openai(config.model);
     }
     case "anthropic": {
+      // Hardcode baseURL so the SDK ignores any ANTHROPIC_BASE_URL env that
+      // points at "https://api.anthropic.com" without "/v1" (a common Claude
+      // Code CLI config that breaks the SDK's URL construction).
       const anthropic = createAnthropic({
         apiKey: config.apiKey,
+        baseURL: "https://api.anthropic.com/v1",
         fetch: buildProxiedFetch(),
       });
       return anthropic(config.model);
@@ -69,7 +73,7 @@ export function resolveProviderConfig(
     },
     anthropic: {
       apiKey: process.env.ANTHROPIC_API_KEY,
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
     },
     ollama: {
       model: "llama3",
