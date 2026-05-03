@@ -29,7 +29,16 @@
       "Bash(xargs kill *)",
       "Bash(unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy ANTHROPIC_BASE_URL)",
       "Bash(echo \"exit=$?\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'feat: V2 第一刀 + 第 1.5 刀 — 食物笔记 + 聊天历史持久化' --body ' *)",
+      "Bash(gh pr *)",
+      "WebSearch",
+      "WebFetch(domain:api-docs.deepseek.com)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)",
+      "Bash(git switch *)"
     ]
   }
 }

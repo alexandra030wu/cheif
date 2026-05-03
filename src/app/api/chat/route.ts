@@ -65,17 +65,24 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Persist assistant message at stream end. Tolerant of providers (e.g.
+  // DeepSeek V4-Flash) that occasionally emit 0 text chars but still produce
+  // a recipes payload — in that case we use a fallback so the message has
+  // something to render and isn't lost.
   const persistAssistant = async (
     content: string,
     recipes: Recipe[] | null
   ): Promise<string | null> => {
-    if (!user || !content) return null;
+    if (!user) return null;
+    const hasRecipes = !!(recipes && recipes.length > 0);
+    if (!content && !hasRecipes) return null;
+    const persistedContent = content || "为你推荐了几道菜：";
     const { data, error } = await supabase
       .from("messages")
       .insert({
         user_id: user.id,
         role: "assistant",
-        content,
+        content: persistedContent,
         recipes: (recipes ?? null) as never,
       })
       .select("id")
