@@ -168,6 +168,66 @@ export interface Database {
         };
         Relationships: [];
       };
+      messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: "user" | "assistant";
+          content: string;
+          recipes: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          role: "user" | "assistant";
+          content?: string;
+          recipes?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          role?: "user" | "assistant";
+          content?: string;
+          recipes?: Json | null;
+        };
+        Relationships: [];
+      };
+      food_notes: {
+        Row: {
+          id: string;
+          user_id: string;
+          food_name: string;
+          food_name_normalized: string;
+          content_md: string;
+          cover_image_url: string | null;
+          ingredient_tags: string[];
+          entry_type: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          food_name: string;
+          food_name_normalized: string;
+          content_md?: string;
+          cover_image_url?: string | null;
+          ingredient_tags?: string[];
+          entry_type?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          food_name?: string;
+          food_name_normalized?: string;
+          content_md?: string;
+          cover_image_url?: string | null;
+          ingredient_tags?: string[];
+          entry_type?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       taste_signals: {
         Row: {
           id: string;
@@ -249,7 +309,19 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      append_food_note: {
+        Args: {
+          p_user_id: string;
+          p_food_name: string;
+          p_food_name_normalized: string;
+          p_summary_md: string;
+          p_entry_type: string;
+          p_ingredient_tags: string[];
+        };
+        Returns: string;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

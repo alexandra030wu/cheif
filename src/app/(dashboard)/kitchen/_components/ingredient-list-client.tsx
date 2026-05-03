@@ -5,6 +5,9 @@ import { IngredientItem } from "./ingredient-item";
 import { EditIngredientSheet, type EditableIngredient } from "./edit-ingredient-sheet";
 import { batchDeleteIngredients } from "../actions";
 
+// DIRECTION-v2 §5.1: expiry-driven UI hidden in slice 1.
+const SHOW_EXPIRY_UI = false;
+
 const CATEGORY_FILTERS = [
   { value: "all", label: "全部" },
   { value: "vegetable", label: "蔬菜" },
@@ -96,7 +99,7 @@ export function IngredientListClient({ ingredients, expiredCount }: Props) {
         )}
       </div>
 
-      {expiredCount > 0 && (
+      {SHOW_EXPIRY_UI && expiredCount > 0 && (
         <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 mb-4">
           <span className="text-lg">⚠️</span>
           <p className="text-sm text-red-700">

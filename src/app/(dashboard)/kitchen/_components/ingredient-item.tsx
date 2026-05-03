@@ -3,6 +3,10 @@
 import { memo } from "react";
 import { CATEGORY_EMOJI } from "./constants";
 
+// DIRECTION-v2 §5.1: expiry-driven UI is hidden in slice 1. Code preserved
+// behind this flag so it can be re-enabled or removed later.
+const SHOW_EXPIRY_UI = false;
+
 interface Props {
   id: string;
   name: string;
@@ -29,11 +33,11 @@ export const IngredientItem = memo(function IngredientItem({
 }: Props) {
   const now = Date.now();
   const expiryTime = expiry_date ? new Date(expiry_date).getTime() : null;
-  const isExpired = expiryTime !== null && expiryTime < now;
+  const isExpired = SHOW_EXPIRY_UI && expiryTime !== null && expiryTime < now;
   const isExpiring3d =
-    expiryTime !== null && !isExpired && expiryTime < now + 3 * 86400000;
+    SHOW_EXPIRY_UI && expiryTime !== null && !isExpired && expiryTime < now + 3 * 86400000;
   const isExpiring7d =
-    expiryTime !== null && !isExpired && !isExpiring3d && expiryTime < now + 7 * 86400000;
+    SHOW_EXPIRY_UI && expiryTime !== null && !isExpired && !isExpiring3d && expiryTime < now + 7 * 86400000;
 
   const borderColor = selected
     ? "border-gray-900 ring-1 ring-gray-900"

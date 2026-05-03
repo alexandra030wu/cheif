@@ -15,6 +15,9 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   hard: "困难",
 };
 
+// DIRECTION-v2 §5.1: expiry-driven UI hidden in slice 1.
+const SHOW_EXPIRY_UI = false;
+
 const GRADIENT_FALLBACKS = [
   "from-amber-100 to-orange-100",
   "from-green-100 to-emerald-100",
@@ -86,7 +89,7 @@ export const RecipeCard = memo(function RecipeCard({ recipe, onTap }: Props) {
           {recipe.cuisine && <span>{recipe.cuisine}</span>}
         </div>
 
-        {usesUrgent && (
+        {SHOW_EXPIRY_UI && usesUrgent && (
           <span className="inline-block rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium mb-2">
             🔥 消耗临期食材
           </span>
