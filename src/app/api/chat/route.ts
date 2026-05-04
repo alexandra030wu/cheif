@@ -45,12 +45,25 @@ function sseDone(controller: ReadableStreamDefaultController) {
 // ── Route handler ──────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID();
   const body = await request.json();
   const parsed = ChatRequestSchema.safeParse(body);
 
   if (!parsed.success) {
-    console.error("[/api/chat] VALIDATION FAILED:", JSON.stringify(parsed.error.flatten(), null, 2));
-    return Response.json({ error: parsed.error.flatten() }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    const errText = issue
+      ? `${issue.path.join(".") || "(root)"}: ${issue.message}`
+      : "请求参数不合法";
+    console.error(
+      JSON.stringify({
+        tag: "chat_error",
+        requestId,
+        stage: "validation",
+        userId: null,
+        err: { name: "ZodError", message: errText, issues: parsed.error.issues },
+      })
+    );
+    return Response.json({ error: errText, requestId }, { status: 400 });
   }
 
   const input = parsed.data;
@@ -64,6 +77,36 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const logCtx = {
+    requestId,
+    userId: user?.id ?? null,
+    intent,
+    provider: config.id,
+    model: config.model,
+    msgLen: input.message.length,
+    historyLen: input.history?.length ?? 0,
+    ingredientsLen: input.ingredients.length,
+    tasteProfilePresent: !!input.tasteProfile,
+  };
+  const logErr = (
+    stage: "stream" | "persist" | "cover",
+    err: unknown,
+    extra?: Record<string, unknown>
+  ) => {
+    const e = err instanceof Error ? err : null;
+    console.error(
+      JSON.stringify({
+        tag: "chat_error",
+        ...logCtx,
+        stage,
+        ...extra,
+        err: e
+          ? { name: e.name, message: e.message, stack: e.stack }
+          : { message: String(err) },
+      })
+    );
+  };
 
   // Persist assistant message at stream end. Tolerant of providers (e.g.
   // DeepSeek V4-Flash) that occasionally emit 0 text chars but still produce
@@ -88,7 +131,7 @@ export async function POST(request: Request) {
       .select("id")
       .single();
     if (error) {
-      console.error("[/api/chat] persist assistant failed:", error.message);
+      logErr("persist", error, { phase: "insert_assistant" });
       return null;
     }
     return data?.id ?? null;
@@ -168,16 +211,17 @@ export async function POST(request: Request) {
                   sseSend(controller, { type: "cover", index, title: r.title, coverImageUrl });
                 }
               } catch (err) {
-                console.warn("[/api/chat] cover generation failed for", r.title, err);
+                logErr("cover", err, { recipeTitle: r.title });
               }
             })
           );
           finalRecipes = updatedRecipes;
         }
       } catch (err) {
-        console.error("[/api/chat] STREAM ERROR:", err);
+        logErr("stream", err);
         sseSend(controller, {
           type: "error",
+          requestId,
           message: err instanceof Error ? err.message : "AI 服务调用失败",
         });
       }
@@ -191,7 +235,7 @@ export async function POST(request: Request) {
           .from("messages")
           .update({ recipes: finalRecipes as never })
           .eq("id", assistantMsgId);
-        if (error) console.error("[/api/chat] update covers failed:", error.message);
+        if (error) logErr("persist", error, { phase: "update_covers" });
       }
 
       sseDone(controller);
