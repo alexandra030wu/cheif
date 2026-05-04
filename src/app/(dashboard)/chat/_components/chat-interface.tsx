@@ -288,8 +288,15 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          const errText =
-            typeof data?.error === "string" ? data.error : "生成失败，请重试";
+          const rawErr = data?.error;
+          const baseErr =
+            typeof rawErr === "string"
+              ? rawErr
+              : rawErr
+                ? JSON.stringify(rawErr)
+                : `生成失败（HTTP ${res.status}），请重试`;
+          const reqId = typeof data?.requestId === "string" ? data.requestId : null;
+          const errText = reqId ? `${baseErr}\n(ID: ${reqId})` : baseErr;
           addMessage({ role: "assistant", content: errText });
           return;
         }
@@ -339,8 +346,12 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                   return { recipes: next };
                 });
               } else if (event.type === "error") {
+                const base =
+                  fullReply || event.message || "生成失败，请重试";
+                const reqId =
+                  typeof event.requestId === "string" ? event.requestId : null;
                 updateMessage(msgId, () => ({
-                  content: fullReply || event.message || "生成失败，请重试",
+                  content: reqId && !fullReply ? `${base}\n(ID: ${reqId})` : base,
                 }));
               }
             } catch {
