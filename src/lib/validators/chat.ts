@@ -18,19 +18,21 @@ const IngredientItemSchema = z.union([
   })),
 ]);
 
+// 老用户的 profiles.taste_profile JSONB 可能只有部分字段（早期 code 写入时
+// 字段还没加全），缺失字段必须默认成空值，否则 Zod 会 hard fail 整个请求。
 export const TasteProfileSchema = z.object({
-  liked_dishes: z.array(z.string()),
-  disliked_dishes: z.array(z.string()),
-  liked_cuisines: z.array(z.string()),
-  disliked_cuisines: z.array(z.string()),
-  liked_ingredients: z.array(z.string()),
-  disliked_ingredients: z.array(z.string()),
-  liked_flavors: z.array(z.string()),
-  disliked_flavors: z.array(z.string()),
-  cooking_styles: z.array(z.string()),
-  dietary_goals: z.array(z.string()),
-  signal_count: z.number(),
-  last_updated: z.string(),
+  liked_dishes: z.array(z.string()).default([]),
+  disliked_dishes: z.array(z.string()).default([]),
+  liked_cuisines: z.array(z.string()).default([]),
+  disliked_cuisines: z.array(z.string()).default([]),
+  liked_ingredients: z.array(z.string()).default([]),
+  disliked_ingredients: z.array(z.string()).default([]),
+  liked_flavors: z.array(z.string()).default([]),
+  disliked_flavors: z.array(z.string()).default([]),
+  cooking_styles: z.array(z.string()).default([]),
+  dietary_goals: z.array(z.string()).default([]),
+  signal_count: z.number().default(0),
+  last_updated: z.string().default(""),
 }).optional();
 
 export const ChatHistoryMessageSchema = z.object({

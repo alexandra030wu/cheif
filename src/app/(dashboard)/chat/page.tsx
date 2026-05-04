@@ -75,7 +75,10 @@ async function ChatLoader() {
         kitchen_equipment: profile.kitchen_equipment ?? undefined,
         default_servings: profile.default_servings ?? undefined,
       };
-      tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
+      // 老用户的 taste_profile 可能是 partial 对象（缺早期没有的字段）。
+      // 必须把缺失字段 merge 上空值，否则 Zod 校验会 hard fail。
+      const raw = profile.taste_profile as Partial<TasteProfile> | null;
+      tasteProfile = raw ? { ...EMPTY_TASTE_PROFILE, ...raw } : EMPTY_TASTE_PROFILE;
     }
   }
 
