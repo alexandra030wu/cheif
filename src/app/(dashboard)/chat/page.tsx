@@ -48,13 +48,21 @@ async function ChatLoader() {
       .gte("created_at", todayStartIso())
       .order("created_at", { ascending: true });
 
-    initialMessages = (rawMessages ?? []).map((m) => ({
-      id: m.id,
-      role: m.role as "user" | "assistant",
-      content: m.content,
-      recipes: Array.isArray(m.recipes) ? (m.recipes as unknown as Recipe[]) : undefined,
-      createdAt: m.created_at,
-    }));
+    initialMessages = (rawMessages ?? [])
+      // 过滤掉脏数据：content 空/空白且不带 recipes 的行（老 schema 允许空
+      // content 入库，渲染出来是空气泡，且会污染下次 prompt）。
+      .filter((m) => {
+        const hasContent = typeof m.content === "string" && m.content.trim().length > 0;
+        const hasRecipes = Array.isArray(m.recipes) && m.recipes.length > 0;
+        return hasContent || (m.role === "assistant" && hasRecipes);
+      })
+      .map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        recipes: Array.isArray(m.recipes) ? (m.recipes as unknown as Recipe[]) : undefined,
+        createdAt: m.created_at,
+      }));
   }
 
   if (user) {

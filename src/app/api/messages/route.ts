@@ -5,7 +5,9 @@ export const maxDuration = 10;
 
 const PostSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  content: z.string(),
+  // 必须 trim 后非空。空 content 一旦入库，下一次构造 prompt 时 spread 进
+  // Anthropic messages 数组就会触发 400「empty content block」。
+  content: z.string().transform((s) => s.trim()).pipe(z.string().min(1)),
   recipes: z.array(z.unknown()).nullable().optional(),
 });
 
@@ -40,8 +42,17 @@ export async function GET(request: Request) {
   const { data, error } = await query;
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
+  // 兜底：过滤掉历史脏数据里 content 为空/空白的行（老 schema 允许空 content
+  // 入库）。这些行渲染出来是空气泡，且会污染下次 prompt。assistant 行只要
+  // 有 recipes 也保留。
+  const cleaned = (data ?? []).filter(
+    (m) =>
+      (typeof m.content === "string" && m.content.trim().length > 0) ||
+      (m.role === "assistant" && Array.isArray(m.recipes) && m.recipes.length > 0)
+  );
+
   // Return ascending so the client renders top-to-bottom in chronological order.
-  return Response.json({ messages: (data ?? []).slice().reverse() });
+  return Response.json({ messages: cleaned.slice().reverse() });
 }
 
 export async function POST(request: Request) {
