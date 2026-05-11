@@ -6,6 +6,7 @@ import { useChatStore, type ChatMessage } from "@/stores/chat-store";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { RecipeDetailSheet } from "./recipe-detail-sheet";
+import { UsageBadge } from "./usage-badge";
 
 type TimeOfDay = "morning" | "noon" | "evening" | "latenight";
 
@@ -503,6 +504,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
       {/* Header */}
       <header className="shrink-0 flex items-center py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12 pr-3">
         <span className="text-base font-bold text-gray-900">蛋厨</span>
+        <UsageBadge />
       </header>
 
       {/* Messages area */}

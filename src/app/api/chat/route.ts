@@ -164,6 +164,16 @@ export async function POST(request: Request) {
     return data?.id ?? null;
   };
 
+  // 用量埋点：仅累加，不影响主流程。流末尾 best-effort 落库。
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let coverCount = 0;
+  const addUsage = (u: { inputTokens?: number; outputTokens?: number } | null | undefined) => {
+    if (!u) return;
+    inputTokens += u.inputTokens ?? 0;
+    outputTokens += u.outputTokens ?? 0;
+  };
+
   const stream = new ReadableStream({
     async start(controller) {
       let fullText = "";
@@ -185,6 +195,12 @@ export async function POST(request: Request) {
             fullText += chunk;
             sseSend(controller, { type: "text", content: chunk });
           }
+          // streamText 的 usage 在流结束后才 resolve
+          try {
+            addUsage(await result.usage);
+          } catch (e) {
+            logErr("persist", e, { phase: "usage_capture_chat" });
+          }
         } else {
           // ── Recipe intent: stream reply text, then generate recipes ──
 
@@ -202,10 +218,15 @@ export async function POST(request: Request) {
             fullText += chunk;
             sseSend(controller, { type: "text", content: chunk });
           }
+          try {
+            addUsage(await textResult.usage);
+          } catch (e) {
+            logErr("persist", e, { phase: "usage_capture_recipe_text" });
+          }
 
           // Step 2: Generate structured recipes (takes longer, but user is already reading text)
           const { system: recipeSystem, messages: recipeMessages } = buildChatRecipePrompt(input);
-          const { object } = await generateObject({
+          const { object, usage: recipeUsage } = await generateObject({
             model,
             schema: ChatResponseSchema,
             system: recipeSystem,
@@ -213,6 +234,7 @@ export async function POST(request: Request) {
             temperature: 0.7,
             maxOutputTokens: 4096,
           });
+          addUsage(recipeUsage);
 
           finalRecipes = object.recipes as Recipe[];
           sseSend(controller, { type: "recipes", recipes: object.recipes });
@@ -235,6 +257,7 @@ export async function POST(request: Request) {
                 const coverImageUrl = await getOrCreateSharedCover(r.title);
                 if (coverImageUrl) {
                   updatedRecipes[index] = { ...updatedRecipes[index], coverImageUrl };
+                  coverCount += 1;
                   sseSend(controller, { type: "cover", index, title: r.title, coverImageUrl });
                 }
               } catch (err) {
@@ -263,6 +286,22 @@ export async function POST(request: Request) {
           .update({ recipes: finalRecipes as never })
           .eq("id", assistantMsgId);
         if (error) logErr("persist", error, { phase: "update_covers" });
+      }
+
+      // 用量埋点落库（best-effort，写失败只记日志不抛错）。流出错时也写一条
+      // —— 错误请求往往已经产生 token 消耗，必须计入。
+      if (user && (inputTokens > 0 || outputTokens > 0 || coverCount > 0)) {
+        const { error } = await supabase.from("usage_logs").insert({
+          user_id: user.id,
+          request_id: requestId,
+          intent,
+          provider: config.id,
+          model: config.model,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          cover_count: coverCount,
+        });
+        if (error) logErr("persist", error, { phase: "usage_log" });
       }
 
       sseDone(controller);

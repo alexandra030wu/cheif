@@ -192,6 +192,38 @@ export interface Database {
         };
         Relationships: [];
       };
+      usage_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          request_id: string;
+          intent: "chat" | "recipe";
+          provider: string;
+          model: string;
+          input_tokens: number;
+          output_tokens: number;
+          cover_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          request_id: string;
+          intent: "chat" | "recipe";
+          provider: string;
+          model: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          cover_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          input_tokens?: number;
+          output_tokens?: number;
+          cover_count?: number;
+        };
+        Relationships: [];
+      };
       food_notes: {
         Row: {
           id: string;
