@@ -66,7 +66,34 @@ export async function POST(request: Request) {
     return Response.json({ error: errText, requestId }, { status: 400 });
   }
 
-  const input = parsed.data;
+  // Sanitize before passing to prompt builders. Anthropic 400 rejects
+  // requests with any empty `content` block in messages; DeepSeek is also
+  // unhappy. Both prompt builders spread `input.history` directly, so any
+  // empty-content row from earlier failed turns would crash the request.
+  const input = {
+    ...parsed.data,
+    message: parsed.data.message.trim(),
+    history: (parsed.data.history ?? []).filter(
+      (m) => typeof m.content === "string" && m.content.trim().length > 0
+    ),
+  };
+
+  if (!input.message) {
+    console.error(
+      JSON.stringify({
+        tag: "chat_error",
+        requestId,
+        stage: "validation",
+        userId: null,
+        err: { name: "EmptyMessage", message: "message after trim is empty" },
+      })
+    );
+    return Response.json(
+      { error: "消息不能为空", requestId },
+      { status: 400 }
+    );
+  }
+
   const intent = classifyIntent(input.message);
   const config = resolveProviderConfig();
   const model = createLanguageModelProvider(config);
