@@ -167,12 +167,34 @@ export async function POST(request: Request) {
   // 用量埋点：仅累加，不影响主流程。流末尾 best-effort 落库。
   let inputTokens = 0;
   let outputTokens = 0;
+  let cacheReadTokens = 0;
+  let cacheWriteTokens = 0;
   let coverCount = 0;
-  const addUsage = (u: { inputTokens?: number; outputTokens?: number } | null | undefined) => {
+  type UsageWithCache = {
+    inputTokens?: number;
+    outputTokens?: number;
+    inputTokenDetails?: {
+      cacheReadTokens?: number;
+      cacheWriteTokens?: number;
+    };
+  };
+  const addUsage = (u: UsageWithCache | null | undefined) => {
     if (!u) return;
     inputTokens += u.inputTokens ?? 0;
     outputTokens += u.outputTokens ?? 0;
+    cacheReadTokens += u.inputTokenDetails?.cacheReadTokens ?? 0;
+    cacheWriteTokens += u.inputTokenDetails?.cacheWriteTokens ?? 0;
   };
+
+  // Anthropic prompt caching：传顶层 cacheControl，Anthropic 自动挑最佳
+  // 缓存断点（system + 早期 messages 是稳定前缀，刚好被缓存）。
+  // - 命中读取 cache 只收 0.1× 价
+  // - 写新缓存收 1.25×（5 分钟内连续请求很快回本）
+  // DeepSeek 不支持，不传 providerOptions。
+  const providerOptions =
+    config.id === "anthropic"
+      ? { anthropic: { cacheControl: { type: "ephemeral" as const } } }
+      : undefined;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -189,6 +211,7 @@ export async function POST(request: Request) {
             messages,
             temperature: 0.7,
             maxOutputTokens: 512,
+            providerOptions,
           });
 
           for await (const chunk of result.textStream) {
@@ -212,6 +235,7 @@ export async function POST(request: Request) {
             messages: chatMessages,
             temperature: 0.7,
             maxOutputTokens: 150,
+            providerOptions,
           });
 
           for await (const chunk of textResult.textStream) {
@@ -233,6 +257,7 @@ export async function POST(request: Request) {
             messages: recipeMessages,
             temperature: 0.7,
             maxOutputTokens: 4096,
+            providerOptions,
           });
           addUsage(recipeUsage);
 
@@ -300,6 +325,8 @@ export async function POST(request: Request) {
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           cover_count: coverCount,
+          cache_read_tokens: cacheReadTokens,
+          cache_write_tokens: cacheWriteTokens,
         });
         if (error) logErr("persist", error, { phase: "usage_log" });
       }

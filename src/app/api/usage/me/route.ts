@@ -10,6 +10,8 @@ export const maxDuration = 10;
 interface MonthUsage {
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   coverCount: number;
   requestCount: number;
   chatCount: number;
@@ -19,6 +21,8 @@ interface MonthUsage {
 const ZERO: MonthUsage = {
   inputTokens: 0,
   outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
   coverCount: 0,
   requestCount: 0,
   chatCount: 0,
@@ -41,7 +45,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("usage_logs")
-    .select("input_tokens, output_tokens, cover_count, intent")
+    .select("input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cover_count, intent")
     .eq("user_id", user.id)
     .gte("created_at", monthStartIso());
 
@@ -56,6 +60,8 @@ export async function GET() {
     (acc, r) => ({
       inputTokens: acc.inputTokens + (r.input_tokens ?? 0),
       outputTokens: acc.outputTokens + (r.output_tokens ?? 0),
+      cacheReadTokens: acc.cacheReadTokens + (r.cache_read_tokens ?? 0),
+      cacheWriteTokens: acc.cacheWriteTokens + (r.cache_write_tokens ?? 0),
       coverCount: acc.coverCount + (r.cover_count ?? 0),
       requestCount: acc.requestCount + 1,
       chatCount: acc.chatCount + (r.intent === "chat" ? 1 : 0),
