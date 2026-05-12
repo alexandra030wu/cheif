@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 interface MonthUsage {
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
   coverCount: number;
   requestCount: number;
   chatCount: number;
@@ -72,7 +74,7 @@ export function UsageBadge() {
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-xl bg-white border border-gray-200 shadow-lg p-3 text-xs space-y-1.5">
+          <div className="absolute right-0 top-full mt-2 z-50 w-60 rounded-xl bg-white border border-gray-200 shadow-lg p-3 text-xs space-y-1.5">
             <div className="font-semibold text-gray-900 pb-1.5 border-b border-gray-100">
               本月用量
             </div>
@@ -81,6 +83,13 @@ export function UsageBadge() {
             <Row label="对话次数" value={String(usage.chatCount)} />
             <Row label="菜谱推荐" value={String(usage.recipeCount)} />
             <Row label="封面图片" value={`${usage.coverCount} 张`} />
+            {usage.cacheReadTokens > 0 && (
+              <Row
+                label="缓存节省"
+                highlight
+                value={`${(usage.cacheReadTokens * 0.9).toLocaleString(undefined, { maximumFractionDigits: 0 })} tokens`}
+              />
+            )}
             <div className="pt-1.5 mt-1.5 border-t border-gray-100 text-[10px] text-gray-400 leading-snug">
               当前免费试用阶段，不限量
             </div>
@@ -91,11 +100,27 @@ export function UsageBadge() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="flex justify-between items-center text-gray-600">
+    <div
+      className={`flex justify-between items-center ${
+        highlight ? "text-emerald-700" : "text-gray-600"
+      }`}
+    >
       <span>{label}</span>
-      <span className="font-mono text-gray-900">{value}</span>
+      <span
+        className={`font-mono ${highlight ? "text-emerald-700 font-semibold" : "text-gray-900"}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

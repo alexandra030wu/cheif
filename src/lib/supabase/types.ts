@@ -203,6 +203,8 @@ export interface Database {
           input_tokens: number;
           output_tokens: number;
           cover_count: number;
+          cache_read_tokens: number;
+          cache_write_tokens: number;
           created_at: string;
         };
         Insert: {
@@ -215,12 +217,16 @@ export interface Database {
           input_tokens?: number;
           output_tokens?: number;
           cover_count?: number;
+          cache_read_tokens?: number;
+          cache_write_tokens?: number;
           created_at?: string;
         };
         Update: {
           input_tokens?: number;
           output_tokens?: number;
           cover_count?: number;
+          cache_read_tokens?: number;
+          cache_write_tokens?: number;
         };
         Relationships: [];
       };
