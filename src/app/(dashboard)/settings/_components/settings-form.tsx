@@ -24,6 +24,11 @@ const COOKING_LEVELS = [
 
 const EQUIPMENT_OPTIONS = ["烤箱", "空气炸锅", "微波炉", "电饭煲", "面包机", "搅拌机", "蒸锅"];
 
+const MODEL_OPTIONS: Array<{ value: "claude" | "deepseek"; label: string; desc: string }> = [
+  { value: "claude", label: "Claude", desc: "默认，回复更稳更自然" },
+  { value: "deepseek", label: "DeepSeek V4", desc: "国产模型，速度快、更省" },
+];
+
 const sectionTitle = "text-sm font-semibold text-gray-900 mb-3";
 
 interface Props {
@@ -42,6 +47,9 @@ export function SettingsForm({ initial }: Props) {
   const [allergies, setAllergies] = useState<string[]>(initial.allergies || []);
   const [level, setLevel] = useState(initial.cooking_level || "beginner");
   const [equipment, setEquipment] = useState<string[]>(initial.kitchen_equipment || []);
+  const [aiModel, setAiModel] = useState<"claude" | "deepseek">(
+    initial.ai_model_preference || "claude"
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +67,7 @@ export function SettingsForm({ initial }: Props) {
       allergies,
       cooking_level: level,
       kitchen_equipment: equipment,
+      ai_model_preference: aiModel,
     });
 
     setSaving(false);
@@ -210,6 +219,31 @@ export function SettingsForm({ initial }: Props) {
             >
               {equipment.includes(item) ? "✓ " : ""}
               {item}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* AI Model */}
+      <section>
+        <h2 className={sectionTitle}>AI 模型</h2>
+        <p className="text-xs text-gray-400 mb-3">选择驱动聊天和菜谱的大模型。不确定就用默认的 Claude。</p>
+        <div className="space-y-2">
+          {MODEL_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setAiModel(opt.value)}
+              className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
+                aiModel === opt.value
+                  ? "bg-gray-900 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <span className="text-sm font-medium">{opt.label}</span>
+              <span className={`text-xs ${aiModel === opt.value ? "text-gray-300" : "text-gray-400"}`}>
+                {opt.desc}
+              </span>
             </button>
           ))}
         </div>

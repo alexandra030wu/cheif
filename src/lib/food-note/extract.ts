@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import type { AIProviderID } from "@/lib/ai-service/types";
 import { normalizeIngredientName } from "@/lib/icon-generation";
 import { FoodNoteExtractionSchema, type FoodNoteCandidate } from "./types";
 
@@ -97,9 +98,10 @@ const RAW_INGREDIENT_BLACKLIST = new Set([
  */
 export async function extractFoodNotes(
   conversation: string,
+  providerId?: AIProviderID,
 ): Promise<FoodNoteCandidate[]> {
   try {
-    const config = resolveProviderConfig();
+    const config = resolveProviderConfig(providerId ? { id: providerId } : undefined);
 
     const cheapModel: Record<string, string> = {
       openai: "gpt-4o-mini",

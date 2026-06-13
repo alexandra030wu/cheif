@@ -72,6 +72,17 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
   }
 }
 
+// User-facing model choices (stored in profiles.ai_model_preference). Maps to
+// internal provider ids. "claude" is the default for null / unknown values so
+// existing users (NULL column) and new users both get Claude.
+export type ModelPreference = "claude" | "deepseek";
+
+export function providerIdForPreference(
+  pref: string | null | undefined
+): AIProviderID {
+  return pref === "deepseek" ? "deepseek" : "anthropic";
+}
+
 export function resolveProviderConfig(
   overrides?: Partial<AIProviderConfig>
 ): AIProviderConfig {

@@ -1,5 +1,7 @@
 import { generateObject } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import { createClient } from "@/lib/supabase/server";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 import { z } from "zod";
 
 export const maxDuration = 30;
@@ -37,7 +39,12 @@ export async function POST(request: Request) {
       ? currentItems.map((i) => `${i.name}${i.quantity ? ` ${i.quantity}` : ""}${i.unit ?? ""}`).join("、")
       : "（空）";
 
-  const config = resolveProviderConfig();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const providerId = await getUserProviderId(supabase, user?.id);
+  const config = resolveProviderConfig({ id: providerId });
   const model = createLanguageModelProvider(config);
 
   const today = new Date().toISOString().slice(0, 10);

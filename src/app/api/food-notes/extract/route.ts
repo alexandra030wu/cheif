@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { extractFoodNotes } from "@/lib/food-note/extract";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
 export const maxDuration = 30;
 
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "conversation is required" }, { status: 400 });
   }
 
-  const notes = await extractFoodNotes(conversation);
+  const providerId = await getUserProviderId(supabase, user.id);
+  const notes = await extractFoodNotes(conversation, providerId);
 
   if (notes.length === 0) {
     return Response.json({ extracted: 0 });
