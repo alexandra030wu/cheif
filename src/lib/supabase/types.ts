@@ -310,6 +310,7 @@ export interface Database {
           kitchen_equipment: string[] | null;
           default_servings: string | null;
           taste_profile: Json | null;
+          ai_model_preference: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -326,6 +327,7 @@ export interface Database {
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
           taste_profile?: Json | null;
+          ai_model_preference?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -341,6 +343,7 @@ export interface Database {
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
           taste_profile?: Json | null;
+          ai_model_preference?: string | null;
           updated_at?: string;
         };
         Relationships: [];

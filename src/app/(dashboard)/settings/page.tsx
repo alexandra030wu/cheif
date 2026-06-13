@@ -19,6 +19,7 @@ async function SettingsLoader() {
     allergies: [],
     cooking_level: "beginner",
     kitchen_equipment: [],
+    ai_model_preference: "claude",
   };
 
   let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
@@ -41,6 +42,8 @@ async function SettingsLoader() {
         allergies: profile.allergies ?? [],
         cooking_level: profile.cooking_level ?? "beginner",
         kitchen_equipment: profile.kitchen_equipment ?? [],
+        ai_model_preference:
+          profile.ai_model_preference === "deepseek" ? "deepseek" : "claude",
       };
       tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }

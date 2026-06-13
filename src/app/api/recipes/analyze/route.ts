@@ -1,5 +1,7 @@
-import { getAIService } from "@/lib/ai-service";
+import { createAIService } from "@/lib/ai-service";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
 const AnalyzeRequestSchema = z.object({
   name: z.string().min(1),
@@ -14,7 +16,12 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const service = getAIService();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const providerId = await getUserProviderId(supabase, user?.id);
+  const service = createAIService({ id: providerId });
   const result = await service.analyzeIngredient(parsed.data);
 
   return Response.json(result);

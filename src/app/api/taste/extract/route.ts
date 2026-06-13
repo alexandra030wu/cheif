@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { extractTasteSignals } from "@/lib/taste/extract";
 import { aggregateTasteProfile } from "@/lib/taste/aggregate";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
 export const maxDuration = 30;
 
@@ -21,8 +22,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "conversation is required" }, { status: 400 });
   }
 
-  // Extract signals via cheap AI model
-  const signals = await extractTasteSignals(conversation);
+  // Extract signals via cheap AI model (cheap variant of the user's chosen provider)
+  const providerId = await getUserProviderId(supabase, user.id);
+  const signals = await extractTasteSignals(conversation, providerId);
 
   if (signals.length === 0) {
     return Response.json({ extracted: 0 });

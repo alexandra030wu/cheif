@@ -12,6 +12,7 @@ export interface ProfileData {
   allergies: string[];
   cooking_level: string;
   kitchen_equipment: string[];
+  ai_model_preference: "claude" | "deepseek";
 }
 
 export type SaveProfileResult =
@@ -36,6 +37,7 @@ export async function saveProfile(data: ProfileData): Promise<SaveProfileResult>
       allergies: data.allergies,
       cooking_level: data.cooking_level || "beginner",
       kitchen_equipment: data.kitchen_equipment,
+      ai_model_preference: data.ai_model_preference || "claude",
     });
 
   if (error) return { status: "error", message: error.message };

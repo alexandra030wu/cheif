@@ -2,6 +2,8 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
 import { ImportedRecipeSchema } from "@/lib/ai-service/types";
+import { createClient } from "@/lib/supabase/server";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 import {
   buildImageExtractionPrompt,
   buildTextExtractionPrompt,
@@ -31,16 +33,21 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const config = resolveProviderConfig();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let providerId = await getUserProviderId(supabase, user?.id);
 
-  // Ollama doesn't support vision — fail fast with a clear message
-  if (parsed.data.mode === "image" && config.id === "ollama") {
-    return Response.json(
-      { error: "当前 AI provider 不支持视觉输入，请切换到 openai 或 anthropic，或使用文字粘贴模式" },
-      { status: 400 }
-    );
+  // Image mode needs a vision-capable provider. DeepSeek V4 / Ollama can't do
+  // vision, so transparently fall back to Claude for image OCR regardless of
+  // the user's chat preference — they still get the import, just powered by a
+  // model that can actually read the screenshot.
+  if (parsed.data.mode === "image" && (providerId === "deepseek" || providerId === "ollama")) {
+    providerId = "anthropic";
   }
 
+  const config = resolveProviderConfig({ id: providerId });
   const model = createLanguageModelProvider(config);
 
   try {

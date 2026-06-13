@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import type { AIProviderID } from "@/lib/ai-service/types";
 import { TasteExtractionSchema, type TasteSignal } from "./types";
 
 const EXTRACTION_PROMPT = `分析以下用户与厨房助手的对话，提取用户的口味偏好信号。
@@ -30,9 +31,10 @@ const EXTRACTION_PROMPT = `分析以下用户与厨房助手的对话，提取�
  */
 export async function extractTasteSignals(
   conversation: string,
+  providerId?: AIProviderID,
 ): Promise<TasteSignal[]> {
   try {
-    const config = resolveProviderConfig();
+    const config = resolveProviderConfig(providerId ? { id: providerId } : undefined);
 
     // Use a cheaper/faster model for extraction
     const cheapModel: Record<string, string> = {

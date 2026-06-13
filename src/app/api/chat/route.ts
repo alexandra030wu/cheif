@@ -6,6 +6,7 @@ import { buildChatReplyPrompt } from "@/lib/ai-service/prompts/chat-reply";
 import { ChatRequestSchema } from "@/lib/validators/chat";
 import { getOrCreateSharedCover } from "@/lib/icon-generation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
 export const maxDuration = 60;
 
@@ -95,8 +96,6 @@ export async function POST(request: Request) {
   }
 
   const intent = classifyIntent(input.message);
-  const config = resolveProviderConfig();
-  const model = createLanguageModelProvider(config);
 
   // Resolve user once on the server. We persist the assistant message at the
   // end of the stream so it survives the user navigating away mid-stream.
@@ -104,6 +103,11 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Pick the provider the user chose in /settings (defaults to Claude).
+  const providerId = await getUserProviderId(supabase, user?.id);
+  const config = resolveProviderConfig({ id: providerId });
+  const model = createLanguageModelProvider(config);
 
   const logCtx = {
     requestId,
