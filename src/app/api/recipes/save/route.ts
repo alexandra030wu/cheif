@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   // Fire-and-forget cover image generation (uses admin client internally)
-  void generateAndStoreCover(inserted.id, recipe.title);
+  void generateAndStoreCover(inserted.id, recipe.title, recipe.coverImageDescription);
 
   // Fire-and-forget: extract taste signals from save behavior
   void (async () => {

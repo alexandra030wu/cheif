@@ -56,7 +56,10 @@ export function buildCrystallizePrompt(
 - ingredients:每项含 name/amount/unit,分量按对话或常识
 - steps:按操作顺序,含对话中强调的技巧(tip 字段)
 - servings/prepTimeMinutes/cookTimeMinutes/difficulty/cuisine/tags:合理估计
-- 语言:中文`;
+- coverImageDescription:**英文**的成品照片描述(一句话,给文生图模型用)。
+  描述成品的真实形态和器皿——饮品/冰沙在玻璃杯里、汤在碗里、炒菜在盘里,
+  写清主要食材的视觉特征和颜色
+- 语言:除 coverImageDescription 外均为中文`;
 
   const messages: Array<{ role: "user" | "assistant"; content: string }> = [
     ...(input.history ?? []),

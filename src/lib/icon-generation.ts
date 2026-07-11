@@ -1,8 +1,16 @@
 import { createHash } from "node:crypto";
 import { createAdminClient } from "./supabase/admin";
 
-const GEMINI_ENDPOINT =
+// 图标(小图、量大)继续走 fast;封面是卡片的脸面,走标准版 Imagen 4,
+// 质感高一档,个人用量下价差可忽略。
+const GEMINI_ENDPOINT_FAST =
   "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict";
+const GEMINI_ENDPOINT_STANDARD =
+  "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict";
+
+// 封面 prompt 版本:掺进缓存键,改 prompt 时递增,否则旧图会一直被
+// title_normalized 命中,新 prompt 永远不生效。
+const COVER_PROMPT_VERSION = "v2";
 
 // Accept either env var name — `GOOGLE_API_KEY` is Google's own convention,
 // `GEMINI_API_KEY` is what we documented first. Value is the same API key.
@@ -14,20 +22,34 @@ function buildIconPrompt(name: string): string {
   return `A realistic food icon of exactly ${name}, on a pure white background, centered, no text, no shadow, product photography style, high definition`;
 }
 
-function buildCoverPrompt(dishName: string): string {
-  return `A beautiful plated dish of ${dishName}, top-down food photography, natural lighting, white plate, restaurant quality, appetizing, high definition`;
+// 统一风格后缀:所有封面同一套光线/视角/色调/布景,整面卡片墙像同一个
+// 摄影师拍的。对"好看"的贡献不亚于换模型。
+const COVER_STYLE =
+  "soft natural window light, 45-degree angle, shallow depth of field, warm inviting tones, minimal rustic wooden table setting, professional food photography, high definition, no text, no watermark, no hands";
+
+/**
+ * 封面 prompt。优先用 LLM 随菜谱生成的英文摄影描述(coverDesc)——它知道
+ * 这道菜的真实形态和器皿(冰沙该在杯里,汤该在碗里);中文自造菜名直塞
+ * 英文模板是旧版图不对的最大根因,只在没有描述时才退回。
+ */
+function buildCoverPrompt(dishName: string, coverDesc?: string): string {
+  const subject =
+    coverDesc?.trim() ||
+    `An appetizing serving of the dish "${dishName}", presented in appropriate tableware`;
+  return `${subject}, ${COVER_STYLE}`;
 }
 
 async function generateImage(
   apiKey: string,
   prompt: string,
-  aspectRatio = "1:1"
+  aspectRatio = "1:1",
+  endpoint = GEMINI_ENDPOINT_FAST
 ): Promise<Buffer | null> {
   let res: Response;
   try {
     // 25s hard timeout — below Vercel Hobby 60s function limit so errors surface in
     // logs instead of the whole function being killed silently.
-    res = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+    res = await fetch(`${endpoint}?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -165,9 +187,16 @@ export async function generateAndStoreIcon(
  * sessions — same title is never regenerated. Safe for chat-generated recipes
  * (no saved recipe row required).
  */
-export async function getOrCreateSharedCover(title: string): Promise<string | null> {
+export async function getOrCreateSharedCover(
+  title: string,
+  coverDesc?: string
+): Promise<string | null> {
   const normalized = normalizeIngredientName(title);
   if (!normalized) return null;
+
+  // 缓存键掺 prompt 版本:v1 时代的旧图(白盘模板 + fast 模型)不再命中,
+  // 同名菜下次请求时用新 prompt 重新生成。旧行留在表里无害。
+  const cacheKey = `${COVER_PROMPT_VERSION}:${normalized}`;
 
   const admin = createAdminClient();
 
@@ -175,7 +204,7 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
   const { data: existing } = await admin
     .from("recipe_covers")
     .select("cover_url")
-    .eq("title_normalized", normalized)
+    .eq("title_normalized", cacheKey)
     .maybeSingle();
 
   if (existing?.cover_url) return existing.cover_url;
@@ -188,12 +217,17 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
   }
 
   // Supabase Storage keys must be ASCII-safe — Chinese titles break uploads with
-  // "Invalid key". Hash the normalized title to a stable 16-char hex key.
-  const titleHash = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
+  // "Invalid key". Hash the cache key to a stable 16-char hex key.
+  const titleHash = createHash("sha256").update(cacheKey).digest("hex").slice(0, 16);
   const filePath = `shared-${titleHash}.png`;
 
   try {
-    const buffer = await generateImage(apiKey, buildCoverPrompt(title), "1:1");
+    const buffer = await generateImage(
+      apiKey,
+      buildCoverPrompt(title, coverDesc),
+      "1:1",
+      GEMINI_ENDPOINT_STANDARD
+    );
     if (!buffer) return null;
 
     const { error: uploadError } = await admin.storage
@@ -213,7 +247,7 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
     await admin
       .from("recipe_covers")
       .upsert(
-        { title, title_normalized: normalized, cover_url: publicUrl },
+        { title, title_normalized: cacheKey, cover_url: publicUrl },
         { onConflict: "title_normalized" }
       );
 
@@ -232,9 +266,10 @@ export async function getOrCreateSharedCover(title: string): Promise<string | nu
  */
 export async function generateAndStoreCover(
   recipeId: string,
-  dishName: string
+  dishName: string,
+  coverDesc?: string
 ): Promise<void> {
-  const coverUrl = await getOrCreateSharedCover(dishName);
+  const coverUrl = await getOrCreateSharedCover(dishName, coverDesc);
   if (!coverUrl) return;
 
   try {

@@ -223,7 +223,10 @@ export async function POST(request: Request) {
         await Promise.allSettled(
           recipes.map(async (r, index) => {
             try {
-              const coverImageUrl = await getOrCreateSharedCover(r.title);
+              const coverImageUrl = await getOrCreateSharedCover(
+                r.title,
+                r.coverImageDescription
+              );
               if (coverImageUrl) {
                 updated[index] = { ...updated[index], coverImageUrl };
                 coverCount += 1;
