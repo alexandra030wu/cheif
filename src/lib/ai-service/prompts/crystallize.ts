@@ -18,11 +18,20 @@ export const CrystallizeResultSchema = z.object({
 
 export type CrystallizeResult = z.infer<typeof CrystallizeResultSchema>;
 
-// 共识信号预过滤:只有 assistant 回复里出现明确定稿语气时才值得花一次
-// generateObject。宁可漏(用户可以再聊一句"就这么定了"触发)不可滥(每条
-// 闲聊都跑提取,又贵又容易出幻觉卡片)。
+// 共识信号预过滤:用户消息或 assistant 回复出现明确定稿语气时才值得花
+// 一次 generateObject。宁可漏(用户可以再补一句"就这么定了"触发)不可滥
+// (每条闲聊都跑提取,又贵又容易出幻觉卡片)。
+//
+// 两侧都要扫:实测中用户说「就这个方案了」,助手只回「好嘞!期待你的
+// 反馈」—— 用户亲口确认是最强的共识信号,只扫助手会漏。
+
+// 助手侧:复述定稿的句式
 export const CONSENSUS_SIGNAL =
   /最终配方|就这么定|就照这个|定稿|最终版本[:：]?|那就做这/;
+
+// 用户侧:亲口拍板的句式
+export const USER_CONSENSUS_SIGNAL =
+  /就这么定|就这个方案|就这个了|就做这个|就它了|就选这个|就按这个|就喝这个|就吃这个|好就这个|可以就这/;
 
 export function buildCrystallizePrompt(
   input: ChatRecipeInput,
