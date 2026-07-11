@@ -134,7 +134,10 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
         fetch("/api/recipes/cover", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: r.title }),
+          body: JSON.stringify({
+            title: r.title,
+            coverImageDescription: r.coverImageDescription,
+          }),
         })
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
