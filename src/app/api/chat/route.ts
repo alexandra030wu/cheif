@@ -11,6 +11,7 @@ import {
   buildCrystallizePrompt,
   CrystallizeResultSchema,
   CONSENSUS_SIGNAL,
+  USER_CONSENSUS_SIGNAL,
 } from "@/lib/ai-service/prompts/crystallize";
 import { ChatRequestSchema } from "@/lib/validators/chat";
 import { getOrCreateSharedCover } from "@/lib/icon-generation";
@@ -262,8 +263,11 @@ export async function POST(request: Request) {
 
           // ── 定稿成卡:对话收敛出共识时,提取聊定的那一道菜 ──
           // 正则预过滤保证绝大多数闲聊零额外成本;提取失败不影响已送达的
-          // 文字回复(非致命,只记日志)。
-          if (CONSENSUS_SIGNAL.test(fullText)) {
+          // 文字回复(非致命,只记日志)。用户亲口拍板和助手复述定稿都算。
+          if (
+            CONSENSUS_SIGNAL.test(fullText) ||
+            USER_CONSENSUS_SIGNAL.test(input.message)
+          ) {
             try {
               const { system: cSystem, messages: cMessages } =
                 buildCrystallizePrompt(input, fullText);
