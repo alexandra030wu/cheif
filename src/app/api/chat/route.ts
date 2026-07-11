@@ -1,8 +1,17 @@
 import { generateObject, streamText } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
-import { ChatResponseSchema, type Recipe } from "@/lib/ai-service/types";
+import {
+  ChatResponseSchema,
+  normalizeImportedRecipe,
+  type Recipe,
+} from "@/lib/ai-service/types";
 import { buildChatRecipePrompt } from "@/lib/ai-service/prompts/chat-recipe";
 import { buildChatReplyPrompt } from "@/lib/ai-service/prompts/chat-reply";
+import {
+  buildCrystallizePrompt,
+  CrystallizeResultSchema,
+  CONSENSUS_SIGNAL,
+} from "@/lib/ai-service/prompts/crystallize";
 import { ChatRequestSchema } from "@/lib/validators/chat";
 import { getOrCreateSharedCover } from "@/lib/icon-generation";
 import { createClient } from "@/lib/supabase/server";
@@ -205,6 +214,28 @@ export async function POST(request: Request) {
       let fullText = "";
       let finalRecipes: Recipe[] | null = null;
       let assistantMsgId: string | null = null;
+
+      // 为 recipes 并行生成封面:每张完成即推一个 cover 事件,返回带
+      // coverImageUrl 的新数组。chat 定稿路径和 recipe 推荐路径共用。
+      const enrichWithCovers = async (recipes: Recipe[]): Promise<Recipe[]> => {
+        const updated = recipes.slice();
+        await Promise.allSettled(
+          recipes.map(async (r, index) => {
+            try {
+              const coverImageUrl = await getOrCreateSharedCover(r.title);
+              if (coverImageUrl) {
+                updated[index] = { ...updated[index], coverImageUrl };
+                coverCount += 1;
+                sseSend(controller, { type: "cover", index, title: r.title, coverImageUrl });
+              }
+            } catch (err) {
+              logErr("cover", err, { recipeTitle: r.title });
+            }
+          })
+        );
+        return updated;
+      };
+
       try {
         if (intent === "chat") {
           // ── Chat intent: stream text only ──
@@ -227,6 +258,39 @@ export async function POST(request: Request) {
             addUsage(await result.usage);
           } catch (e) {
             logErr("persist", e, { phase: "usage_capture_chat" });
+          }
+
+          // ── 定稿成卡:对话收敛出共识时,提取聊定的那一道菜 ──
+          // 正则预过滤保证绝大多数闲聊零额外成本;提取失败不影响已送达的
+          // 文字回复(非致命,只记日志)。
+          if (CONSENSUS_SIGNAL.test(fullText)) {
+            try {
+              const { system: cSystem, messages: cMessages } =
+                buildCrystallizePrompt(input, fullText);
+              const { object: cResult, usage: cUsage } = await generateObject({
+                model,
+                schema: CrystallizeResultSchema,
+                system: cSystem,
+                messages: cMessages,
+                temperature: 0.3,
+                maxOutputTokens: 2048,
+                providerOptions,
+              });
+              addUsage(cUsage);
+              if (cResult.consensusReached && cResult.recipe?.title) {
+                const recipe = normalizeImportedRecipe(cResult.recipe);
+                finalRecipes = [recipe];
+                sseSend(controller, {
+                  type: "recipes",
+                  recipes: finalRecipes,
+                  crystallized: true,
+                });
+                assistantMsgId = await persistAssistant(fullText, finalRecipes);
+                finalRecipes = await enrichWithCovers(finalRecipes);
+              }
+            } catch (err) {
+              logErr("stream", err, { phase: "crystallize" });
+            }
           }
         } else {
           // ── Recipe intent: stream reply text, then generate recipes ──
@@ -279,22 +343,7 @@ export async function POST(request: Request) {
           // as each completes. Recipes already render on the client; covers fade in.
           // We also opportunistically PATCH the just-inserted message with covers
           // so future page loads don't have to re-fetch covers (saves a round-trip).
-          const updatedRecipes: Recipe[] = object.recipes.slice() as Recipe[];
-          await Promise.allSettled(
-            object.recipes.map(async (r, index) => {
-              try {
-                const coverImageUrl = await getOrCreateSharedCover(r.title);
-                if (coverImageUrl) {
-                  updatedRecipes[index] = { ...updatedRecipes[index], coverImageUrl };
-                  coverCount += 1;
-                  sseSend(controller, { type: "cover", index, title: r.title, coverImageUrl });
-                }
-              } catch (err) {
-                logErr("cover", err, { recipeTitle: r.title });
-              }
-            })
-          );
-          finalRecipes = updatedRecipes;
+          finalRecipes = await enrichWithCovers(finalRecipes);
         }
       } catch (err) {
         logErr("stream", err);
@@ -305,9 +354,11 @@ export async function POST(request: Request) {
         });
       }
 
-      // Final persist for chat-intent (recipe-intent persisted earlier; we
-      // update with the cover-enriched recipes for completeness).
-      if (intent === "chat") {
+      // Final persist. 三种情况:
+      //   - chat 且未定稿:纯文字消息,现在落库
+      //   - chat 且定稿 / recipe 推荐:消息已带 recipes 落库,这里补写
+      //     cover-enriched 的版本
+      if (intent === "chat" && !assistantMsgId) {
         await persistAssistant(fullText, null);
       } else if (assistantMsgId && finalRecipes) {
         const { error } = await supabase

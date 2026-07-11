@@ -42,7 +42,13 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       )}
       {hasRecipes && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <div
+          className={
+            message.recipes!.length === 1
+              ? "max-w-sm" // 定稿单卡:全宽大卡,不挤进半列
+              : "grid grid-cols-1 md:grid-cols-2 gap-2.5"
+          }
+        >
           {message.recipes!.map((recipe, i) => (
             <RecipeCard key={i} recipe={recipe} onTap={onRecipeTap} />
           ))}
