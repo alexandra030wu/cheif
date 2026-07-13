@@ -1,7 +1,9 @@
 import type { RecipeGenerationInput } from "../types";
+import { buildFatLossBlock } from "./fat-loss";
 
 export function buildRecipePrompt(input: RecipeGenerationInput): string {
   const servings = input.servings ?? 1;
+  const fatLossOn = input.fatLoss?.enabled ?? false;
 
   const parts = [
     `你是一位经验丰富的家庭厨师。用户冰箱里有以下食材：${input.ingredients.join("、")}。`,
@@ -11,11 +13,15 @@ export function buildRecipePrompt(input: RecipeGenerationInput): string {
     `2. 推荐 2-3 道菜供用户选择。`,
     `3. 默认按 ${servings} 人份设计用量。`,
     "4. 每道菜必须标注【预计烹饪时间】和【难度】（简单/中等/困难）。",
+    ...(fatLossOn ? ["", buildFatLossBlock(input.fatLoss, "markdown")] : []),
     "",
     "输出格式（每道菜）：",
     "---",
     "### 菜名",
     "⏱ 预计烹饪时间：XX 分钟 | 难度：简单/中等/困难",
+    ...(fatLossOn
+      ? ["🔥 营养估算（单人份）：XXX kcal | 蛋白质 XXg | 碳水 XXg | 脂肪 XXg"]
+      : []),
     "**所用食材：** ...",
     "**调料：** ...（可假设用户家中有基本调料）",
     "**步骤：**",

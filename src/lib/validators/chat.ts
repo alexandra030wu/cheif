@@ -46,6 +46,9 @@ export const ChatRequestSchema = z.object({
       cooking_level: z.string().optional(),
       kitchen_equipment: z.array(z.string()).optional(),
       default_servings: z.string().optional(),
+      fat_loss_mode: z.boolean().optional(),
+      daily_calorie_target: z.number().positive().optional(),
+      daily_protein_target_g: z.number().positive().optional(),
     })
     .optional(),
   tasteProfile: TasteProfileSchema,

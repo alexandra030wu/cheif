@@ -1,4 +1,5 @@
 import type { ChatIngredient, ChatRecipeInput, ChatTasteProfile } from "../types";
+import { buildFatLossBlock } from "./fat-loss";
 
 // ── helpers ──────────────────────────────────────────────────
 
@@ -259,6 +260,16 @@ export function buildChatRecipePrompt(input: ChatRecipeInput): string {
       ? `- 常用厨具：${prefs.kitchen_equipment.join("、")}（只推荐这些厨具能做的菜）`
       : "- 常用厨具：未设置（假设有灶台、炒锅、蒸锅等基本厨具）";
 
+  const fatLossBlock = buildFatLossBlock(
+    prefs?.fat_loss_mode
+      ? {
+          enabled: true,
+          dailyCalorieTarget: prefs.daily_calorie_target,
+          dailyProteinTargetG: prefs.daily_protein_target_g,
+        }
+      : undefined,
+  );
+
   const prompt = `你是蛋厨（dan.chef）—— 一个温暖、有个性的智能烹饪助手。你的使命是让每个人都能轻松做出好吃的饭菜。
 
 ## 你的性格
@@ -301,7 +312,7 @@ ${time}
 8. 每道菜谱必须包含 nutritionEstimate（粗略估算：calories, proteinG, carbsG, fatG）
 9. 可以假设用户有基本调料（盐、酱油、醋、食用油、糖）
 10. 按「${servings}」的份量设计用量
-
+${fatLossBlock ? `\n${fatLossBlock}\n` : ""}
 ${difficultyBlock(cookingLevel)}
 
 ### 输出格式
@@ -322,7 +333,7 @@ ${hasUrgent ? "- 尽量优先消耗带有过期标记的食材" : ""}
 - 如果用户问的不是做菜相关的话题，友善地引导回烹饪场景
 - prep_time + cook_time 必须反映实际操作时间；腌制/静置等被动等待时间单独在步骤中说明，不计入活跃时间
 
-${FEW_SHOT}`;
+${FEW_SHOT}${fatLossBlock ? "\n注意：以上示例仅示范输出格式和质量标准；减脂模式下，菜品选择、用油量和热量必须服从「减脂模式」硬约束。" : ""}`;
 
   return prompt;
 }

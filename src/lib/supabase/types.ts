@@ -212,6 +212,9 @@ export interface Database {
           kitchen_equipment: string[] | null;
           default_servings: string | null;
           taste_profile: Json | null;
+          fat_loss_mode: boolean | null;
+          daily_calorie_target: number | null;
+          daily_protein_target_g: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -228,6 +231,9 @@ export interface Database {
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
           taste_profile?: Json | null;
+          fat_loss_mode?: boolean | null;
+          daily_calorie_target?: number | null;
+          daily_protein_target_g?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -243,7 +249,32 @@ export interface Database {
           kitchen_equipment?: string[] | null;
           default_servings?: string | null;
           taste_profile?: Json | null;
+          fat_loss_mode?: boolean | null;
+          daily_calorie_target?: number | null;
+          daily_protein_target_g?: number | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      cook_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          recipe_title: string;
+          nutrition: Json | null;
+          cooked_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          recipe_title: string;
+          nutrition?: Json | null;
+          cooked_at?: string;
+        };
+        Update: {
+          recipe_title?: string;
+          nutrition?: Json | null;
+          cooked_at?: string;
         };
         Relationships: [];
       };

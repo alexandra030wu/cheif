@@ -15,6 +15,15 @@ export interface AIProviderConfig {
 
 // ---------- Domain inputs ----------
 
+export interface FatLossTargets {
+  enabled: boolean;
+  /** 单人份每餐热量区间，默认 500–600 kcal */
+  mealCaloriesMin?: number;
+  mealCaloriesMax?: number;
+  dailyCalorieTarget?: number;
+  dailyProteinTargetG?: number;
+}
+
 export interface RecipeGenerationInput {
   ingredients: string[];
   cuisine?: string;
@@ -23,6 +32,7 @@ export interface RecipeGenerationInput {
   maxCookingTime?: number;
   difficulty?: "easy" | "medium" | "hard";
   freeformNotes?: string;
+  fatLoss?: FatLossTargets;
 }
 
 export interface IngredientAnalysisInput {
@@ -225,6 +235,9 @@ export interface ChatRecipeInput {
     cooking_level?: string;
     kitchen_equipment?: string[];
     default_servings?: string;
+    fat_loss_mode?: boolean;
+    daily_calorie_target?: number;
+    daily_protein_target_g?: number;
   };
   tasteProfile?: ChatTasteProfile;
 }
