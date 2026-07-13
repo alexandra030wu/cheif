@@ -21,6 +21,9 @@ async function ChatLoader() {
     cooking_level?: string;
     kitchen_equipment?: string[];
     default_servings?: string;
+    fat_loss_mode?: boolean;
+    daily_calorie_target?: number;
+    daily_protein_target_g?: number;
   } | undefined;
 
   let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
@@ -28,7 +31,7 @@ async function ChatLoader() {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("nickname, dietary_preferences, allergies, cooking_level, kitchen_equipment, default_servings, taste_profile")
+      .select("nickname, dietary_preferences, allergies, cooking_level, kitchen_equipment, default_servings, taste_profile, fat_loss_mode, daily_calorie_target, daily_protein_target_g")
       .eq("id", user.id)
       .single();
 
@@ -42,6 +45,9 @@ async function ChatLoader() {
         cooking_level: profile.cooking_level ?? undefined,
         kitchen_equipment: profile.kitchen_equipment ?? undefined,
         default_servings: profile.default_servings ?? undefined,
+        fat_loss_mode: profile.fat_loss_mode ?? undefined,
+        daily_calorie_target: profile.daily_calorie_target ?? undefined,
+        daily_protein_target_g: profile.daily_protein_target_g ?? undefined,
       };
       tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }

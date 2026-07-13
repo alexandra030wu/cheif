@@ -34,6 +34,11 @@ function toggleInArray(arr: string[], item: string) {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
 }
 
+function parsePositiveInt(value: string): number | null {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function SettingsForm({ initial }: Props) {
   const [avatar, setAvatar] = useState(initial.avatar_url || "🧑‍🍳");
   const [nickname, setNickname] = useState(initial.nickname || "");
@@ -42,6 +47,13 @@ export function SettingsForm({ initial }: Props) {
   const [allergies, setAllergies] = useState<string[]>(initial.allergies || []);
   const [level, setLevel] = useState(initial.cooking_level || "beginner");
   const [equipment, setEquipment] = useState<string[]>(initial.kitchen_equipment || []);
+  const [fatLossMode, setFatLossMode] = useState(initial.fat_loss_mode);
+  const [calorieTarget, setCalorieTarget] = useState(
+    initial.daily_calorie_target != null ? String(initial.daily_calorie_target) : ""
+  );
+  const [proteinTarget, setProteinTarget] = useState(
+    initial.daily_protein_target_g != null ? String(initial.daily_protein_target_g) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +71,9 @@ export function SettingsForm({ initial }: Props) {
       allergies,
       cooking_level: level,
       kitchen_equipment: equipment,
+      fat_loss_mode: fatLossMode,
+      daily_calorie_target: parsePositiveInt(calorieTarget),
+      daily_protein_target_g: parsePositiveInt(proteinTarget),
     });
 
     setSaving(false);
@@ -144,6 +159,64 @@ export function SettingsForm({ initial }: Props) {
             </button>
           ))}
         </div>
+      </section>
+
+      {/* Fat Loss Mode */}
+      <section>
+        <h2 className={sectionTitle}>减脂模式</h2>
+        <button
+          type="button"
+          onClick={() => setFatLossMode(!fatLossMode)}
+          className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
+            fatLossMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          <div>
+            <span className="text-sm font-medium">{fatLossMode ? "🔥 减脂模式已开启" : "减脂模式"}</span>
+            <p className={`text-xs mt-0.5 ${fatLossMode ? "text-gray-300" : "text-gray-400"}`}>
+              高蛋白、控油，每餐约 500–600 kcal，菜谱附营养估算
+            </p>
+          </div>
+          <span
+            className={`shrink-0 w-10 h-6 rounded-full relative transition-colors ${
+              fatLossMode ? "bg-green-500" : "bg-gray-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                fatLossMode ? "left-[18px]" : "left-0.5"
+              }`}
+            />
+          </span>
+        </button>
+        {fatLossMode && (
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <label className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+              <span className="block text-xs text-gray-400 mb-1">每日热量目标 (kcal)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={calorieTarget}
+                onChange={(e) => setCalorieTarget(e.target.value)}
+                placeholder="如 1650"
+                className="w-full bg-transparent text-base text-gray-900 placeholder-gray-300 focus:outline-none"
+              />
+            </label>
+            <label className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+              <span className="block text-xs text-gray-400 mb-1">每日蛋白质目标 (g)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={proteinTarget}
+                onChange={(e) => setProteinTarget(e.target.value)}
+                placeholder="如 120"
+                className="w-full bg-transparent text-base text-gray-900 placeholder-gray-300 focus:outline-none"
+              />
+            </label>
+          </div>
+        )}
       </section>
 
       {/* Allergies */}

@@ -26,6 +26,9 @@ interface UserPreferences {
   cooking_level?: string;
   kitchen_equipment?: string[];
   default_servings?: string;
+  fat_loss_mode?: boolean;
+  daily_calorie_target?: number;
+  daily_protein_target_g?: number;
 }
 
 interface TasteProfile {

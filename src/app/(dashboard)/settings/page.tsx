@@ -19,6 +19,9 @@ async function SettingsLoader() {
     allergies: [],
     cooking_level: "beginner",
     kitchen_equipment: [],
+    fat_loss_mode: false,
+    daily_calorie_target: null,
+    daily_protein_target_g: null,
   };
 
   let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
@@ -41,6 +44,9 @@ async function SettingsLoader() {
         allergies: profile.allergies ?? [],
         cooking_level: profile.cooking_level ?? "beginner",
         kitchen_equipment: profile.kitchen_equipment ?? [],
+        fat_loss_mode: profile.fat_loss_mode ?? false,
+        daily_calorie_target: profile.daily_calorie_target ?? null,
+        daily_protein_target_g: profile.daily_protein_target_g ?? null,
       };
       tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }

@@ -12,6 +12,9 @@ export interface ProfileData {
   allergies: string[];
   cooking_level: string;
   kitchen_equipment: string[];
+  fat_loss_mode: boolean;
+  daily_calorie_target: number | null;
+  daily_protein_target_g: number | null;
 }
 
 export type SaveProfileResult =
@@ -36,6 +39,9 @@ export async function saveProfile(data: ProfileData): Promise<SaveProfileResult>
       allergies: data.allergies,
       cooking_level: data.cooking_level || "beginner",
       kitchen_equipment: data.kitchen_equipment,
+      fat_loss_mode: data.fat_loss_mode,
+      daily_calorie_target: data.daily_calorie_target,
+      daily_protein_target_g: data.daily_protein_target_g,
     });
 
   if (error) return { status: "error", message: error.message };
