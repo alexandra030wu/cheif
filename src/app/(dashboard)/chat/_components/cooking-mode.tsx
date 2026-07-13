@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Recipe } from "@/lib/ai-service";
+import { logCookedRecipe } from "@/app/(dashboard)/nutrition/actions";
 
 interface Props {
   recipe: Recipe;
@@ -142,6 +143,15 @@ export function CookingMode({ recipe, onClose }: Props) {
 
   const swipe = useSwipe(goNext, goPrev);
 
+  // 完成烹饪 → 记入今日营养（best-effort，不阻塞关闭）
+  const handleFinish = useCallback(() => {
+    void logCookedRecipe({
+      title: recipe.title,
+      nutrition: recipe.nutritionEstimate ?? null,
+    }).catch(() => {});
+    onClose();
+  }, [recipe.title, recipe.nutritionEstimate, onClose]);
+
   const progress = ((step + 1) / total) * 100;
 
   return (
@@ -238,7 +248,7 @@ export function CookingMode({ recipe, onClose }: Props) {
         {step === total - 1 ? (
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleFinish}
             className="w-full rounded-2xl bg-white text-gray-900 py-4 text-base font-semibold active:bg-gray-200 transition-colors"
           >
             完成烹饪
