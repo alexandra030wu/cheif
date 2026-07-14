@@ -19,6 +19,9 @@
 - 手动或 curl 测试核心流程：发消息 → 生成菜谱 → 收藏 → 食材操作
 - 确认不影响已有功能（回归测试）
 
+### 4.5 环境变量记录
+- `ANYTOCOPY_OPEN_API_BASE` / `ANYTOCOPY_API_KEY` / `ANYTOCOPY_API_SECRET`：anytocopy.com Open API，视频链接导入菜谱（抖音视频 → 语音文稿）。付费额度，仅服务端使用。注意：该服务单任务有 30 分钟处理时限，超长视频会失败（额度自动退还）。
+
 ### 5. 环境兼容
 - .env.local 中的代理变量（HTTPS_PROXY）不影响功能（代理不可用时 graceful fallback）
 - 新增环境变量需在 CLAUDE.md 中记录

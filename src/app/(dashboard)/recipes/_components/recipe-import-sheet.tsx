@@ -14,7 +14,13 @@ const inputClass =
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB — Vercel function payload limit is 4.5 MB
 
 type Stage = "input" | "extracting" | "preview";
-type Mode = "image" | "text";
+type Mode = "image" | "text" | "link";
+
+const LINK_PATTERN = /https?:\/\/[^\s，。！,!]+/;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
 
 interface Props {
   open: boolean;
@@ -32,6 +38,8 @@ export function RecipeImportSheet({ open, onClose }: Props) {
   const [imageMime, setImageMime] = useState("image/jpeg");
   const [imageSize, setImageSize] = useState(0);
   const [pastedText, setPastedText] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const [extractingHint, setExtractingHint] = useState("");
   const [inputError, setInputError] = useState("");
 
   // preview state (editable Recipe)
@@ -60,6 +68,8 @@ export function RecipeImportSheet({ open, onClose }: Props) {
     setImagePreview("");
     setImageSize(0);
     setPastedText("");
+    setLinkText("");
+    setExtractingHint("");
     setInputError("");
     setDraft(null);
     setSaving(false);
@@ -94,31 +104,90 @@ export function RecipeImportSheet({ open, onClose }: Props) {
   const handlePasteFromClipboard = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
-      setPastedText(text);
+      if (mode === "link") {
+        setLinkText(text);
+      } else {
+        setPastedText(text);
+      }
       setInputError("");
     } catch {
       setInputError("读取剪贴板失败，请手动粘贴");
     }
+  }, [mode]);
+
+  // 视频链接 → 提交转写任务 → 轮询拿文稿
+  const fetchVideoTranscript = useCallback(async (shareText: string) => {
+    const submitRes = await fetch("/api/recipes/import-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: shareText }),
+    });
+    const submitData = await submitRes.json().catch(() => ({}));
+    if (!submitRes.ok || !submitData?.taskId) {
+      throw new Error(
+        typeof submitData?.error === "string" ? submitData.error : "提交视频提取任务失败"
+      );
+    }
+
+    setExtractingHint("正在提取视频语音，通常需要 1-2 分钟…");
+    const deadline = Date.now() + 4 * 60_000;
+    while (Date.now() < deadline) {
+      await sleep(3000);
+      const res = await fetch(
+        `/api/recipes/import-video?taskId=${encodeURIComponent(submitData.taskId)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "查询失败，请重试");
+      }
+      if (data.status === "success") {
+        const combined = [data.caption, data.transcript]
+          .filter((s: unknown) => typeof s === "string" && s.trim())
+          .join("\n\n")
+          .slice(0, 8000);
+        if (combined.trim().length < 20) {
+          throw new Error("视频里没有识别到足够的语音内容");
+        }
+        return combined;
+      }
+      if (data.status === "failed") {
+        throw new Error(data.error || "视频提取失败");
+      }
+    }
+    throw new Error("提取超时，视频可能过长，请换个视频或稍后重试");
   }, []);
 
   const handleExtract = useCallback(async () => {
     setInputError("");
-    const body =
-      mode === "image"
-        ? imageBase64
-          ? { mode: "image", imageBase64, mimeType: imageMime }
-          : null
-        : pastedText.trim().length >= 20
-        ? { mode: "text", text: pastedText.trim() }
-        : null;
+    setExtractingHint("");
 
-    if (!body) {
-      setInputError(mode === "image" ? "请先选一张图" : "文字太短，至少 20 字");
+    if (mode === "link" && !LINK_PATTERN.test(linkText)) {
+      setInputError("没有找到链接，请粘贴抖音分享的完整文字或链接");
+      return;
+    }
+    if (mode === "image" && !imageBase64) {
+      setInputError("请先选一张图");
+      return;
+    }
+    if (mode === "text" && pastedText.trim().length < 20) {
+      setInputError("文字太短，至少 20 字");
       return;
     }
 
     setStage("extracting");
     try {
+      const body =
+        mode === "image"
+          ? { mode: "image", imageBase64, mimeType: imageMime }
+          : {
+              mode: "text",
+              text:
+                mode === "link"
+                  ? await fetchVideoTranscript(linkText.trim())
+                  : pastedText.trim(),
+            };
+
+      setExtractingHint("");
       const res = await fetch("/api/recipes/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,7 +205,7 @@ export function RecipeImportSheet({ open, onClose }: Props) {
       setInputError(err instanceof Error ? err.message : "提取失败，请重试");
       setStage("input");
     }
-  }, [mode, imageBase64, imageMime, pastedText]);
+  }, [mode, imageBase64, imageMime, pastedText, linkText, fetchVideoTranscript]);
 
   const handleSave = useCallback(async () => {
     if (!draft || saving) return;
@@ -206,10 +275,18 @@ export function RecipeImportSheet({ open, onClose }: Props) {
             }}
             pastedText={pastedText}
             setPastedText={setPastedText}
+            linkText={linkText}
+            setLinkText={setLinkText}
             onPaste={handlePasteFromClipboard}
             inputError={inputError}
             onExtract={handleExtract}
-            extractEnabled={mode === "image" ? !!imageBase64 : pastedText.trim().length >= 20}
+            extractEnabled={
+              mode === "image"
+                ? !!imageBase64
+                : mode === "link"
+                ? LINK_PATTERN.test(linkText)
+                : pastedText.trim().length >= 20
+            }
           />
         )}
 
@@ -220,8 +297,12 @@ export function RecipeImportSheet({ open, onClose }: Props) {
               <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
               <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
             </div>
-            <p className="text-sm text-gray-500">蛋厨正在读菜谱…</p>
-            <p className="text-xs text-gray-400 mt-1">通常需要 5-15 秒</p>
+            <p className="text-sm text-gray-500">
+              {extractingHint ? "蛋厨正在看视频…" : "蛋厨正在读菜谱…"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {extractingHint || "通常需要 5-15 秒"}
+            </p>
           </div>
         )}
 
@@ -282,6 +363,8 @@ function InputStage({
   onClearImage,
   pastedText,
   setPastedText,
+  linkText,
+  setLinkText,
   onPaste,
   inputError,
   onExtract,
@@ -295,6 +378,8 @@ function InputStage({
   onClearImage: () => void;
   pastedText: string;
   setPastedText: (t: string) => void;
+  linkText: string;
+  setLinkText: (t: string) => void;
   onPaste: () => void;
   inputError: string;
   onExtract: () => void;
@@ -325,6 +410,15 @@ function InputStage({
           }`}
         >
           📝 粘贴文字
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("link")}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+            mode === "link" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+          }`}
+        >
+          🔗 视频链接
         </button>
       </div>
 
@@ -382,6 +476,31 @@ function InputStage({
           />
           <p className="text-xs text-gray-400 text-right">
             {pastedText.length} 字（至少 20 字）
+          </p>
+        </div>
+      )}
+
+      {mode === "link" && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">抖音视频链接</label>
+            <button
+              type="button"
+              onClick={onPaste}
+              className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2"
+            >
+              从剪贴板粘贴
+            </button>
+          </div>
+          <textarea
+            value={linkText}
+            onChange={(e) => setLinkText(e.target.value)}
+            placeholder="在抖音里点「分享 → 复制链接」，把整段文字粘到这里即可&#10;例如：7.99 abc:/ 复制打开抖音… https://v.douyin.com/xxxx/"
+            rows={4}
+            className={`${inputClass} resize-none`}
+          />
+          <p className="text-xs text-gray-400">
+            蛋厨会听完视频里的讲解，自动整理成菜谱。视频越短越快，通常 1-2 分钟。
           </p>
         </div>
       )}
