@@ -1,0 +1,56 @@
+# Keep the Supabase free-tier project from auto-pausing.
+#
+# Free tier pauses any project with no API activity for ~7 days. A 30s curl
+# from this workflow counts as activity, so a daily ping prevents the pause
+# (and the "fetch failed" login screen that comes with it).
+#
+# Setup (one-time):
+#   gh secret set SUPABASE_URL --body "https://<project>.supabase.co"
+#   gh secret set SUPABASE_ANON_KEY --body "<anon key>"
+# Both are public values (anon key ships in the browser bundle); using
+# secrets is just for cleanliness / portability across repos.
+#
+# Manual run: Actions → "Supabase Keepalive" → Run workflow.
+
+name: Supabase Keepalive
+
+on:
+  schedule:
+    # Daily at 12:00 UTC (20:00 Beijing). One ping/day burns ~5 GitHub Actions
+    # seconds per month — well under any free quota.
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Supabase REST endpoint
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY secret is not set."
+            echo "Set both via 'gh secret set' or repo Settings → Secrets."
+            exit 1
+          fi
+          # /rest/v1/ with anon key returns 200 (empty body) on a healthy
+          # project, or 401 if the key is wrong, or a connection error if
+          # the project is already paused. Any HTTP response = project alive.
+          http_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/")
+          echo "REST ping returned HTTP ${http_code}"
+          if [ "${http_code}" = "000" ]; then
+            echo "::error::Could not reach Supabase. Project may already be paused — visit https://supabase.com/dashboard to restore it."
+            exit 1
+          fi
+          # Bonus: hit /auth/v1/health (no key needed). Confirms the auth
+          # service specifically is awake, which is what the app's login
+          # depends on.
+          auth_code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 \
+            "${SUPABASE_URL}/auth/v1/health" || true)
+          echo "Auth health ping returned HTTP ${auth_code}"

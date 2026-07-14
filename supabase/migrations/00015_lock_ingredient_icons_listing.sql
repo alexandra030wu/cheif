@@ -1,0 +1,22 @@
+-- 00015_lock_ingredient_icons_listing.sql
+--
+-- 修 Supabase Security Advisor 的 "Public Bucket Allows Listing" 警告
+-- (storage.ingredient-icons)。
+--
+-- 现状:
+--   docs/migration-ingredient-icons.sql:13-15 建了一条 storage.objects 的
+--   SELECT policy「Anyone can read ingredient icons」= 任何匿名用户都能
+--   /storage/v1/object/list/ingredient-icons 列光桶里所有文件名。
+--   桶本身还是 public,所以按 URL 下载图标(公开访问)不需要这条 policy ——
+--   `bucket.public = true` 会让 GET /storage/v1/object/public/... 绕过 RLS。
+--
+-- 应用侧:
+--   src/lib/icon-generation.ts 只调用 `.upload()`(走 service_role 绕 RLS)
+--   和 `.getPublicUrl()`(纯 URL 构造,不打 API)。没有任何 `.list()` 调用。
+--   → 砍掉 SELECT policy 不影响业务;公开图标下载仍正常。
+--
+-- 影响:
+--   - anon/authenticated:LIST 请求返回空,GET-by-URL 仍返回图片 ✅
+--   - service_role:LIST 仍能全看(RLS 不生效) ✅
+
+DROP POLICY IF EXISTS "Anyone can read ingredient icons" ON storage.objects;

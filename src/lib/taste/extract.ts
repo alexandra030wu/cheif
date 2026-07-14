@@ -1,5 +1,6 @@
 import { generateObject } from "ai";
 import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import type { AIProviderID } from "@/lib/ai-service/types";
 import { TasteExtractionSchema, type TasteSignal } from "./types";
 
 const EXTRACTION_PROMPT = `分析以下用户与厨房助手的对话，提取用户的口味偏好信号。
@@ -30,14 +31,16 @@ const EXTRACTION_PROMPT = `分析以下用户与厨房助手的对话，提取�
  */
 export async function extractTasteSignals(
   conversation: string,
+  providerId?: AIProviderID,
 ): Promise<TasteSignal[]> {
   try {
-    const config = resolveProviderConfig();
+    const config = resolveProviderConfig(providerId ? { id: providerId } : undefined);
 
     // Use a cheaper/faster model for extraction
     const cheapModel: Record<string, string> = {
       openai: "gpt-4o-mini",
       anthropic: "claude-haiku-4-5-20251001",
+      deepseek: "deepseek-v4-flash",
       ollama: config.model, // use whatever is configured
     };
 
@@ -55,9 +58,9 @@ export async function extractTasteSignals(
     });
 
     return object.signals;
-  } catch {
+  } catch (err) {
     // Extraction is best-effort, never fail the main flow
-    console.error("[taste] extraction failed, skipping");
+    console.error("[taste] extraction failed:", err instanceof Error ? err.message : err);
     return [];
   }
 }

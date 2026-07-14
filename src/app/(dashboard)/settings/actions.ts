@@ -15,6 +15,7 @@ export interface ProfileData {
   fat_loss_mode: boolean;
   daily_calorie_target: number | null;
   daily_protein_target_g: number | null;
+  ai_model_preference: "claude" | "deepseek";
 }
 
 export type SaveProfileResult =
@@ -42,6 +43,7 @@ export async function saveProfile(data: ProfileData): Promise<SaveProfileResult>
       fat_loss_mode: data.fat_loss_mode,
       daily_calorie_target: data.daily_calorie_target,
       daily_protein_target_g: data.daily_protein_target_g,
+      ai_model_preference: data.ai_model_preference || "claude",
     });
 
   if (error) return { status: "error", message: error.message };

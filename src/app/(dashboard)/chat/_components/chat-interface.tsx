@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import type { Recipe } from "@/lib/ai-service";
-import { useChatStore } from "@/stores/chat-store";
-import { PromptCards } from "./prompt-cards";
+import { useChatStore, type ChatMessage } from "@/stores/chat-store";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { RecipeDetailSheet } from "./recipe-detail-sheet";
+import { UsageBadge } from "./usage-badge";
 
 type TimeOfDay = "morning" | "noon" | "evening" | "latenight";
 
@@ -50,6 +50,7 @@ interface Props {
   ingredients: Ingredient[];
   userPreferences?: UserPreferences;
   tasteProfile?: TasteProfile;
+  initialMessages?: ChatMessage[];
 }
 
 function getTimeOfDay(): TimeOfDay {
@@ -60,10 +61,26 @@ function getTimeOfDay(): TimeOfDay {
   return "latenight";
 }
 
-export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Props) {
+export function ChatInterface({ ingredients, userPreferences, tasteProfile, initialMessages }: Props) {
   const messages = useChatStore((s) => s.messages);
   const addMessage = useChatStore((s) => s.addMessage);
-  const clearMessages = useChatStore((s) => s.clearMessages);
+  const hydrate = useChatStore((s) => s.hydrate);
+  const prependMessages = useChatStore((s) => s.prependMessages);
+  const replaceId = useChatStore((s) => s.replaceId);
+
+  // Hydrate from server on mount. Re-fires only if initialMessages identity
+  // changes (e.g. router.refresh after delete). Empty array hydrates an empty
+  // store, which is the right behavior for a brand-new user.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    hydrate(initialMessages ?? []);
+  }, [initialMessages, hydrate]);
+
+  // Pagination state for "load older messages" on scroll-to-top.
+  const [olderExhausted, setOlderExhausted] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -120,7 +137,10 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
         fetch("/api/recipes/cover", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: r.title }),
+          body: JSON.stringify({
+            title: r.title,
+            coverImageDescription: r.coverImageDescription,
+          }),
         })
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
@@ -143,14 +163,121 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
     });
   }, [messages, updateMessage]);
 
+  // ── Food-note extractor: debounced session-end flush ──────────────────
+  // Buffers user/assistant exchanges and POSTs them to /api/food-notes/extract
+  // when the conversation has been idle for FOOD_NOTE_DEBOUNCE_MS. Also flushes
+  // on page unload so a closed tab doesn't drop the last few turns.
+  const FOOD_NOTE_DEBOUNCE_MS = 30_000;
+  const pendingExchangesRef = useRef<Array<{ user: string; assistant: string }>>([]);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushFoodNotes = useCallback((useBeacon = false) => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    const exchanges = pendingExchangesRef.current;
+    if (exchanges.length === 0) return;
+    pendingExchangesRef.current = [];
+
+    const conversation = exchanges
+      .map((e) => `用户: ${e.user}\n助手: ${e.assistant}`)
+      .join("\n\n");
+    const body = JSON.stringify({ conversation });
+
+    if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
+      try {
+        navigator.sendBeacon(
+          "/api/food-notes/extract",
+          new Blob([body], { type: "application/json" })
+        );
+        return;
+      } catch {
+        // fall through to fetch
+      }
+    }
+    void fetch("/api/food-notes/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  }, []);
+
+  const scheduleFoodNoteFlush = useCallback(() => {
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = setTimeout(() => flushFoodNotes(false), FOOD_NOTE_DEBOUNCE_MS);
+  }, [flushFoodNotes]);
+
+  // Flush on tab close / hide so the last exchanges aren't lost.
+  useEffect(() => {
+    const onBeforeUnload = () => flushFoodNotes(true);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushFoodNotes(true);
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+    };
+  }, [flushFoodNotes]);
+
+  // Fire-and-forget DB persist for a chat message. On success, swap the local
+  // id for the DB id so subsequent updates (e.g. cover backfill) target the
+  // canonical row and pagination dedup keeps working.
+  const persistMessage = useCallback(
+    (localId: string, role: "user" | "assistant", content: string, recipes?: Recipe[]) => {
+      void fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, content, recipes: recipes ?? null }),
+        keepalive: true,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          const dbId = data?.message?.id;
+          if (dbId) replaceId(localId, dbId);
+        })
+        .catch(() => {
+          // Silent — we still have the message in local store; user-visible
+          // bubble keeps rendering. Worst case it disappears on next reload.
+          console.error("[messages] persist failed for", localId);
+        });
+    },
+    [replaceId]
+  );
+
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
 
-      addMessage({ role: "user", content: text.trim() });
+      const userText = text.trim();
+      const userLocalId = addMessage({ role: "user", content: userText });
+      persistMessage(userLocalId, "user", userText);
       setInputValue("");
       setIsLoading(true);
       scrollToBottom();
+
+      // Snapshot the most recent up-to-20 messages as conversation history.
+      // We grab from the store directly (not the closed-over `messages` ref)
+      // so the user message we just added isn't included as a duplicate.
+      const HISTORY_LIMIT = 20;
+      const allMsgs = useChatStore.getState().messages;
+      // Strip the just-added user message (last entry) and trim down.
+      const priorMsgs = allMsgs.slice(0, -1).slice(-HISTORY_LIMIT);
+      const history = priorMsgs.map((m) => ({
+        role: m.role,
+        // Skip recipe payload — the LLM only needs textual context. Include
+        // an inline note if recipes were attached so it knows context exists.
+        content: m.content + (m.recipes && m.recipes.length > 0
+          ? `\n\n[已展示 ${m.recipes.length} 道菜谱卡片：${m.recipes.map((r) => r.title).join("、")}]`
+          : ""),
+      }));
 
       try {
         const res = await fetch("/api/chat", {
@@ -160,6 +287,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
             message: text.trim(),
             ingredients: chatIngredients,
             timeOfDay: getTimeOfDay(),
+            history,
             preferences: userPreferences,
             tasteProfile,
           }),
@@ -167,8 +295,15 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          const errText =
-            typeof data?.error === "string" ? data.error : "生成失败，请重试";
+          const rawErr = data?.error;
+          const baseErr =
+            typeof rawErr === "string"
+              ? rawErr
+              : rawErr
+                ? JSON.stringify(rawErr)
+                : `生成失败（HTTP ${res.status}），请重试`;
+          const reqId = typeof data?.requestId === "string" ? data.requestId : null;
+          const errText = reqId ? `${baseErr}\n(ID: ${reqId})` : baseErr;
           addMessage({ role: "assistant", content: errText });
           return;
         }
@@ -176,6 +311,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
         // Create empty assistant message, then stream into it
         const msgId = addMessage({ role: "assistant", content: "" });
         let fullReply = "";
+        let finalRecipes: Recipe[] | undefined;
 
         const reader = res.body!.getReader();
         const decoder = new TextDecoder();
@@ -201,7 +337,8 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
                 updateMessage(msgId, () => ({ content: fullReply }));
                 scrollToBottom();
               } else if (event.type === "recipes") {
-                updateMessage(msgId, () => ({ recipes: event.recipes }));
+                finalRecipes = event.recipes as Recipe[];
+                updateMessage(msgId, () => ({ recipes: finalRecipes }));
                 scrollToBottom();
               } else if (event.type === "cover") {
                 // Cover image arrived for a specific recipe — merge into existing array
@@ -212,11 +349,16 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
                   if (!target || target.title !== event.title) return {};
                   const next = m.recipes.slice();
                   next[idx] = { ...target, coverImageUrl: event.coverImageUrl };
+                  finalRecipes = next;
                   return { recipes: next };
                 });
               } else if (event.type === "error") {
+                const base =
+                  fullReply || event.message || "生成失败，请重试";
+                const reqId =
+                  typeof event.requestId === "string" ? event.requestId : null;
                 updateMessage(msgId, () => ({
-                  content: fullReply || event.message || "生成失败，请重试",
+                  content: reqId && !fullReply ? `${base}\n(ID: ${reqId})` : base,
                 }));
               }
             } catch {
@@ -225,14 +367,22 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
           }
         }
 
-        // Fire-and-forget: extract taste signals from this exchange
+        // Server already persisted the assistant message during the stream
+        // (so it survives mid-stream navigation). We don't re-POST it here.
         if (fullReply) {
-          const conversation = `用户: ${text.trim()}\n助手: ${fullReply}`;
+          // Fire-and-forget: extract taste signals from this exchange
+          const conversation = `用户: ${userText}\n助手: ${fullReply}`;
           void fetch("/api/taste/extract", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ conversation }),
           }).catch(() => {});
+
+          // Buffer this exchange for the food-note extractor. Flush on a 30s
+          // debounce so the LLM gets a coherent multi-turn slice instead of
+          // single Q/A pairs (DIRECTION-v2 §6.3 — quality over recency).
+          pendingExchangesRef.current.push({ user: userText, assistant: fullReply });
+          scheduleFoodNoteFlush();
         }
       } catch {
         addMessage({ role: "assistant", content: "网络错误，请重试" });
@@ -241,19 +391,69 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
         scrollToBottom();
       }
     },
-    [chatIngredients, isLoading, scrollToBottom, userPreferences, addMessage, updateMessage]
+    [chatIngredients, isLoading, scrollToBottom, userPreferences, tasteProfile, addMessage, updateMessage, persistMessage, scheduleFoodNoteFlush]
   );
 
   const handleSend = useCallback(() => {
     sendMessage(inputValue);
   }, [inputValue, sendMessage]);
 
-  const handlePromptSelect = useCallback(
-    (text: string) => {
-      sendMessage(text);
-    },
-    [sendMessage]
-  );
+  // Load older messages when the user scrolls near the top.
+  const loadOlder = useCallback(async () => {
+    if (loadingOlder || olderExhausted) return;
+    const oldest = messages[0];
+    const before = oldest?.createdAt;
+    if (!before) {
+      // No createdAt means we only have local-only messages; nothing to fetch.
+      setOlderExhausted(true);
+      return;
+    }
+    setLoadingOlder(true);
+    try {
+      const res = await fetch(`/api/messages?before=${encodeURIComponent(before)}&limit=50`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const raw = (data?.messages ?? []) as Array<{
+        id: string;
+        role: "user" | "assistant";
+        content: string;
+        recipes: unknown;
+        created_at: string;
+      }>;
+      if (raw.length === 0) {
+        setOlderExhausted(true);
+        return;
+      }
+      const older: ChatMessage[] = raw.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        recipes: Array.isArray(m.recipes) ? (m.recipes as Recipe[]) : undefined,
+        createdAt: m.created_at,
+      }));
+      // Preserve scroll position: read scrollHeight before, then offset after.
+      const el = scrollRef.current;
+      const prevScrollHeight = el?.scrollHeight ?? 0;
+      prependMessages(older);
+      requestAnimationFrame(() => {
+        const newScrollHeight = el?.scrollHeight ?? 0;
+        if (el) el.scrollTop = newScrollHeight - prevScrollHeight;
+      });
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [loadingOlder, olderExhausted, messages, prependMessages]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!el) return;
+      if (el.scrollTop < 80) loadOlder();
+    }
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [loadOlder]);
 
   const handleRecipeTap = useCallback((recipe: Recipe) => {
     setSelectedRecipe(recipe);
@@ -276,64 +476,103 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile }: Pr
 
   const isEmpty = messages.length === 0;
 
+  // Group messages by local-day so we can drop a date divider between groups.
+  // Messages without createdAt (local-only, in-flight) attach to the latest
+  // group so they don't break sorting.
+  const dayGroups = useMemo(() => {
+    const groups: Array<{ day: string; label: string; items: ChatMessage[] }> = [];
+    const fmt = new Intl.DateTimeFormat("zh-CN", {
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    const todayKey = (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toDateString();
+    })();
+    for (const m of messages) {
+      const date = m.createdAt ? new Date(m.createdAt) : new Date();
+      const key = date.toDateString();
+      const last = groups[groups.length - 1];
+      if (last && last.day === key) {
+        last.items.push(m);
+      } else {
+        const label = key === todayKey ? "今天" : fmt.format(date);
+        groups.push({ day: key, label, items: [m] });
+      }
+    }
+    return groups;
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))]">
       {/* Header */}
-      <header className="shrink-0 flex items-center justify-between py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12 pr-3">
-        <span className="text-base font-bold text-gray-900">
-          🍳 Cheif
-        </span>
-        {!isEmpty && (
-          <button
-            type="button"
-            onClick={clearMessages}
-            className="rounded-lg px-2.5 py-1.5 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          >
-            清空对话
-          </button>
-        )}
+      <header className="shrink-0 flex items-center py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12 pr-3">
+        <span className="text-base font-bold text-gray-900">蛋厨</span>
+        <UsageBadge />
       </header>
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-full px-4">
-            <div className="text-center mb-8">
-              <p className="text-4xl mb-3">🍳</p>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                想吃点什么？
-              </h2>
-              <p className="text-sm text-gray-400">
-                {ingredients.length > 0
-                  ? `已有 ${ingredients.length} 种食材，为你智能推荐`
-                  : "告诉我你想吃什么，我来推荐菜谱"}
-              </p>
-            </div>
-            <PromptCards onSelect={handlePromptSelect} />
+          <div className="flex flex-col items-center justify-center h-full px-6">
+            <p className="text-base text-gray-400 font-light">
+              今天聊点什么？
+            </p>
           </div>
         ) : (
           <div className="py-4 space-y-4 max-w-2xl mx-auto">
-            {messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                onRecipeTap={handleRecipeTap}
-              />
+            {/* Visible affordance for loading older messages — pull-to-load
+                isn't discoverable on its own. */}
+            {!olderExhausted && (
+              <div className="flex justify-center py-2">
+                <button
+                  type="button"
+                  onClick={loadOlder}
+                  disabled={loadingOlder}
+                  className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-full border border-gray-200 bg-white disabled:opacity-50"
+                >
+                  {loadingOlder ? "加载中…" : "↑ 加载更早消息"}
+                </button>
+              </div>
+            )}
+            {olderExhausted && messages.length > 0 && (
+              <div className="text-center text-[11px] text-gray-300 py-2 select-none">
+                已经是最早一条
+              </div>
+            )}
+            {dayGroups.map((group) => (
+              <Fragment key={group.day}>
+                <div className="text-center text-[11px] text-gray-300 my-3 select-none">
+                  {group.label}
+                </div>
+                {group.items.map((msg) => (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    onRecipeTap={handleRecipeTap}
+                  />
+                ))}
+              </Fragment>
             ))}
 
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="px-4">
-                <div className="inline-flex items-center gap-2 rounded-2xl rounded-bl-md bg-white border border-gray-100 px-4 py-3 shadow-sm">
-                  <div className="flex gap-1">
+            {/* Loading indicator — only show before the first stream chunk
+                arrives. Once the assistant bubble has text, the bubble itself
+                is the indicator; a second row of dots looks like duplication. */}
+            {isLoading &&
+              !(
+                messages[messages.length - 1]?.role === "assistant" &&
+                (messages[messages.length - 1]?.content?.length ?? 0) > 0
+              ) && (
+                <div className="px-4">
+                  <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-md bg-white border border-gray-100 px-4 py-3 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
                   </div>
-                  <span className="text-xs text-gray-400">正在翻菜谱...</span>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Spacer for input bar */}
             <div className="h-16" />

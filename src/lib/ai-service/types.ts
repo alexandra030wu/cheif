@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ---------- Provider configuration ----------
 
-export type AIProviderID = "openai" | "anthropic" | "ollama";
+export type AIProviderID = "openai" | "anthropic" | "deepseek" | "ollama";
 
 export interface AIProviderConfig {
   id: AIProviderID;
@@ -76,6 +76,9 @@ export const RecipeSchema = z.object({
     .optional(),
   tags: z.array(z.string()),
   coverImageUrl: z.string().optional(),
+  // LLM 随菜谱生成的英文摄影描述,直接喂 Imagen 出封面。它知道这道菜的
+  // 真实形态和器皿(冰沙在杯里/汤在碗里),比中文菜名塞英文模板准得多。
+  coverImageDescription: z.string().optional(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
@@ -146,6 +149,7 @@ export const ImportedRecipeSchema = z.object({
     )
     .optional(),
   tags: z.array(z.string()).optional(),
+  coverImageDescription: optionalString,
 });
 
 export type ImportedRecipe = z.infer<typeof ImportedRecipeSchema>;
@@ -177,6 +181,7 @@ export function normalizeImportedRecipe(partial: ImportedRecipe): Recipe {
         tip: s.tip?.trim() || undefined,
       })),
     tags: (partial.tags ?? []).map((t) => t.trim()).filter(Boolean),
+    coverImageDescription: partial.coverImageDescription?.trim() || undefined,
   };
 }
 
@@ -228,6 +233,7 @@ export interface ChatRecipeInput {
   message: string;
   ingredients: ChatIngredient[];
   timeOfDay: "morning" | "noon" | "evening" | "latenight";
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
   preferences?: {
     nickname?: string;
     dietary_preferences?: string[];

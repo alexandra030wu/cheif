@@ -7,14 +7,19 @@ const LEVEL_LABELS: Record<string, string> = {
   expert: "大厨",
 };
 
+export interface PromptMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 /**
- * Build system + user prompt for non-recipe chat (greetings, cooking knowledge,
- * emotional support, general conversation). Uses the 蛋厨 persona but without
- * recipe generation rules or few-shot examples.
+ * Build system + messages for non-recipe chat (greetings, cooking knowledge,
+ * emotional support). Includes the recent multi-turn `history` so the model
+ * actually remembers what was said earlier in the session.
  */
 export function buildChatReplyPrompt(input: ChatRecipeInput): {
   system: string;
-  prompt: string;
+  messages: PromptMessage[];
 } {
   const prefs = input.preferences;
   const nickname = prefs?.nickname || "朋友";
@@ -40,7 +45,13 @@ ${buildTasteBlock(input.tasteProfile, nickname)}
 - 闲聊时适度引导回烹饪话题，但不要生硬
 - 用户表达情绪时先共情，再自然地建议做菜缓解（如"辛苦了！要不要我推荐点省事的菜？"）
 - 如果用户想要菜谱推荐，引导他们说出具体想法（"想吃什么类型的？"）
-- 不要输出 JSON 或结构化数据，只用自然语言回复`;
+- 不要输出 JSON 或结构化数据，只用自然语言回复
+- **你能读到上方的多轮对话历史，请把它当成真实的连续聊天，不要装作不记得之前说过的话**`;
 
-  return { system, prompt: input.message };
+  const messages: PromptMessage[] = [
+    ...(input.history ?? []),
+    { role: "user", content: input.message },
+  ];
+
+  return { system, messages };
 }

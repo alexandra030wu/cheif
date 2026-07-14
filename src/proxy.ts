@@ -4,6 +4,13 @@ import { createServerClient } from "@supabase/ssr";
 const publicPaths = ["/login", "/signup", "/callback"];
 
 export async function proxy(request: NextRequest) {
+  // /api/danos 走自己的 Bearer token 鉴权(见 api/danos/recipes/route.ts),
+  // 调用方是桌面端 DanOS,没有浏览器 cookie。不查 session、不重定向,
+  // 直接放行到 route handler 里做 token 校验。
+  if (request.nextUrl.pathname.startsWith("/api/danos")) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

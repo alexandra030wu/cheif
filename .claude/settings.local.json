@@ -13,7 +13,32 @@
       "Bash(npm run:*)",
       "Bash(find /Users/tiedan/cheif/node_modules/next/dist/docs -type f -name *)",
       "Bash(ls /Users/tiedan/cheif/src/app/\\\\\\(dashboard\\\\\\)/_components/)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npx eslint *)",
+      "Bash(kill %1)",
+      "Bash(awk -F= '{print $1}')",
+      "Bash(curl -s -o /dev/null -w \"GET /notes → HTTP %{http_code}\\\\n\" http://localhost:3000/notes)",
+      "Bash(curl -s -o /dev/null -w \"GET /chat → HTTP %{http_code}\\\\n\" http://localhost:3000/chat)",
+      "Bash(curl -sS -o /dev/null -w \"/login → HTTP %{http_code} \\(time=%{time_total}s, size=%{size_download}\\)\\\\n\" --max-time 30 -L http://localhost:3000/login)",
+      "Bash(curl -sS -o /dev/null -w \"/notes \\(no auth\\) → HTTP %{http_code} \\(time=%{time_total}s\\)\\\\n\" --max-time 30 -L http://localhost:3000/notes)",
+      "Bash(kill 15810)",
+      "Bash(kill -9 15810)",
+      "Bash(curl -sS -o /dev/null -w \"/login → HTTP %{http_code} \\(time=%{time_total}s\\)\\\\n\" --max-time 30 http://localhost:3000/login)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Bash(xargs kill *)",
+      "Bash(unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy ANTHROPIC_BASE_URL)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'feat: V2 第一刀 + 第 1.5 刀 — 食物笔记 + 聊天历史持久化' --body ' *)",
+      "Bash(gh pr *)",
+      "WebSearch",
+      "WebFetch(domain:api-docs.deepseek.com)",
+      "Bash(git fetch *)",
+      "Bash(git stash *)",
+      "Bash(git switch *)"
     ]
   }
 }

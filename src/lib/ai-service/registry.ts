@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import type { AIProviderConfig, AIProviderID } from "./types";
 
 function buildProxiedFetch() {
@@ -36,11 +37,27 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
       return openai(config.model);
     }
     case "anthropic": {
+      // Hardcode baseURL so the SDK ignores any ANTHROPIC_BASE_URL env that
+      // points at "https://api.anthropic.com" without "/v1" (a common Claude
+      // Code CLI config that breaks the SDK's URL construction).
       const anthropic = createAnthropic({
         apiKey: config.apiKey,
+        baseURL: "https://api.anthropic.com/v1",
         fetch: buildProxiedFetch(),
       });
       return anthropic(config.model);
+    }
+    case "deepseek": {
+      // Use @ai-sdk/deepseek (dedicated provider) instead of openai.chat() —
+      // it handles DeepSeek's structured-output quirks (json_object instead
+      // of json_schema response_format) automatically. V4 docs:
+      // https://api-docs.deepseek.com/news/news260424
+      const deepseek = createDeepSeek({
+        apiKey: config.apiKey,
+        baseURL: config.baseURL,
+        fetch: buildProxiedFetch(),
+      });
+      return deepseek(config.model);
     }
     case "ollama": {
       // Ollama exposes an OpenAI-compatible API
@@ -53,6 +70,17 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
     default:
       throw new Error(`Unknown AI provider: ${config.id}`);
   }
+}
+
+// User-facing model choices (stored in profiles.ai_model_preference). Maps to
+// internal provider ids. "claude" is the default for null / unknown values so
+// existing users (NULL column) and new users both get Claude.
+export type ModelPreference = "claude" | "deepseek";
+
+export function providerIdForPreference(
+  pref: string | null | undefined
+): AIProviderID {
+  return pref === "deepseek" ? "deepseek" : "anthropic";
 }
 
 export function resolveProviderConfig(
@@ -69,7 +97,18 @@ export function resolveProviderConfig(
     },
     anthropic: {
       apiKey: process.env.ANTHROPIC_API_KEY,
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
+    },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      // V4-Flash by default — V4-Pro takes 60-70s on structured outputs
+      // (full recipe schema), which exceeds Vercel's 60s function timeout
+      // and triggers connection resets. Flash is ~5-10x faster and quality
+      // is sufficient for chat/recipe tasks. Pro can be used later when
+      // we add per-user model selection in /settings.
+      // Old deepseek-chat / deepseek-reasoner retire 2026-07-24.
+      model: "deepseek-v4-flash",
+      baseURL: process.env.DEEPSEEK_BASE_URL,
     },
     ollama: {
       model: "llama3",

@@ -31,3 +31,16 @@
 - 按功能拆分 commit，不混提
 - commit message 格式：feat/fix/refactor: 中文描述
 - push 前确认所有改动已 add
+
+## 环境变量清单（Vercel）
+
+| 变量 | 用途 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 连接 |
+| `SUPABASE_SERVICE_ROLE_KEY` | admin client（封面上传、DanOS 端点） |
+| `ANTHROPIC_API_KEY` | Claude（默认 provider） |
+| `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` | DeepSeek 可选 provider |
+| `GOOGLE_API_KEY` 或 `GEMINI_API_KEY` | Imagen 封面/图标生成 |
+| `AI_PROVIDER` | 默认 provider id（可被用户设置覆盖） |
+| `DANOS_API_TOKEN` | DanOS 桌面端拉菜谱卡的 Bearer token（自生成随机长串） |
+| `DANOS_USER_ID` | 上述 token 绑定的 Supabase user uuid（个人账号） |

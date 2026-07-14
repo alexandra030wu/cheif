@@ -46,9 +46,11 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名密钥 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase 服务端管理密钥（图标/封面上传） |
-| `AI_PROVIDER` | AI 提供商选择 (`openai` / `anthropic` / `ollama`) |
+| `AI_PROVIDER` | AI 提供商选择 (`openai` / `anthropic` / `deepseek` / `ollama`) |
 | `OPENAI_API_KEY` | OpenAI API 密钥 |
 | `ANTHROPIC_API_KEY` | Anthropic API 密钥 |
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥（V4 接入，2026-04-24 发布） |
+| `DEEPSEEK_BASE_URL` | DeepSeek API base URL（可选，默认 `https://api.deepseek.com/v1`） |
 | `OLLAMA_BASE_URL` | Ollama 服务地址（默认 `http://localhost:11434/v1`） |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Google Gemini API 密钥（Imagen 图像生成），两个名字都兼容 |
 | `HTTPS_PROXY` | HTTP 代理地址（可选，用于 Anthropic） |
@@ -80,17 +82,16 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 
 #### 对话界面
 
-- 顶部标题栏「🍳 Cheif」+ 「清空对话」按钮
-- 中间消息区：用户消息右对齐深色气泡，AI 消息左对齐 + 结构化菜谱卡片
+- 顶部标题栏「蛋厨」（V2 第 1.5 刀：去掉 emoji 与「清空对话」按钮，对齐持久化历史的"扁平连续"心智）
+- 中间消息区：用户消息右对齐深色气泡，AI 消息左对齐 + 结构化菜谱卡片，**按"今天 / 月日 周X"分组**显示日期分隔
 - 底部输入框：自动伸缩 textarea + 发送按钮，safe-area 适配
-- 加载动画：三点跳动 + 「正在翻菜谱…」
+- 加载动画：三点跳动（V2 第 1.5 刀：去掉「正在翻菜谱…」文字，避免误导成只能聊菜谱）
+- IME 友好：中文输入法 `compositionend` 后 50ms grace 内忽略 Enter，避免选词误发送
 
-#### 时段提示词卡片
+#### 极简空状态（V2 第 1.5 刀）
 
-- 初始状态（无消息时）显示欢迎页 + 可点击提示词
-- 根据时段自动切换：早餐（5-10点）/ 午餐（11-14点）/ 晚餐（15-20点）/ 夜宵
-- 通用提示词：「惊喜菜谱」「HOT 热门菜」「健身餐」「快手10分钟」
-- 点击自动作为用户消息发送
+- 无消息时只显示一行低调问候：「今天聊点什么？」
+- 不再展示 emoji / 时段 PromptCards / 食材数量副标题（保留 [prompt-cards.tsx](src/app/(dashboard)/chat/_components/prompt-cards.tsx) 文件以备复用，但不挂载）
 
 #### 意图分类 + 流式响应
 
@@ -139,11 +140,15 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - 非烹饪话题 → 友善引导回烹饪场景
 - few-shot 示例（番茄炒蛋 + 红烧排骨）嵌入 prompt
 
-#### 对话持久化
+#### 对话持久化（V2 第 1.5 刀升级）
 
-- Zustand `persist` 中间件缓存消息到 `localStorage`
-- 页面切换/刷新后自动恢复对话记录
-- 「清空对话」按钮重置
+- **DB 是真相源**：所有消息存入 `messages` 表（迁移 00010），按用户隔离 RLS。`recipes` JSONB 字段把当时推荐的菜谱卡片（含封面 URL）一起保存，刷新后菜谱仍可点开。
+- **SSR 注入**：进入 `/chat` 时服务端只拉取**今天 00:00 之后**的消息，作为 `initialMessages` prop 注入。
+- **上拉加载更早**：滚动到顶部 80px 内自动 `GET /api/messages?before=<oldest_iso>&limit=50`，按 `created_at desc` 取，前置 dedup。
+- **客户端 store**：Zustand 不再用 `persist` 中间件（DB 是真相）。新增 `hydrate` / `prependMessages` / `replaceId` actions。本地发出消息先用 `local-N` id，POST 入库成功后调 `replaceId` 换成 DB 的 UUID，保证后续 cover 回填等更新能命中。
+- **入库时机**：用户消息在 `addMessage` 后立刻 fire-and-forget POST；AI 消息在流结束、收齐 `recipes` + `cover` 事件后一次 POST 最终态。
+- **跨设备 / 隐身**：登录后历史自动跟随用户，无 localStorage 依赖。
+- **「清空对话」按钮已移除**：V2 §3.3「不再有终点」原则不希望用户主动结束对话；DB 端有 endpoint 可清，不暴露 UI。
 
 ### 3.3 菜谱详情页
 
@@ -238,9 +243,12 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **搜索框**：实时关键字过滤
 - **分类筛选标签栏**：全部/蔬菜/水果/蛋白质/乳制品/谷物/香料/调味品/其他，横向滚动
 - **搜索 + 筛选叠加**，空结果友好提示 + 清除筛选按钮
-- **保质期排序**：默认按保质期升序，最紧急排最前，无保质期排最后
-- **三级过期标记**：已过期（红色边框）、3 天内（橙色）、7 天内（黄色）
-- **过期横幅**：有过期食材时顶部显示「⚠️ 你有 N 个食材已过期，建议尽快处理」
+- **过期相关 UI 在 V2 第一刀已隐藏**（DIRECTION-v2 §5.1）。下列条目代码保留但不渲染，受 `SHOW_EXPIRY_UI = false` / `SHOW_EXPIRY_PROMPT = false` 控制：
+  - ~~保质期排序：默认按保质期升序~~（改为按创建时间倒序）
+  - ~~三级过期标记（红/橙/黄边框）~~
+  - ~~过期横幅「⚠️ 你有 N 个食材已过期」~~
+  - ~~菜谱推荐 prompt 中的过期标签 / `🔥 消耗临期食材` tag / "优先消耗临期食材"软规则~~
+- `expiry_date` 字段保留，用户仍可填写，但产品不再据此主动做事
 - **批量管理模式**：右上角「管理」按钮进入，卡片出现圆形勾选框，底部固定操作栏（全选/取消全选 + 已选计数 + 删除），勾选时卡片高亮+缩放反馈，删除需 inline 确认
 - **点击查看详情**：底部 Sheet（90vh），包含：
   - 大图展示（160×160 圆角卡片，AI 图标或 emoji 回退）
@@ -339,6 +347,41 @@ Cheif 是一款面向个人用户的智能厨房管理应用。以 AI 对话式�
 - **Safe-area 适配**：菜谱详情页、Cooking Mode 顶部 header 使用 `env(safe-area-inset-top)` padding，iOS 刘海 / Dynamic Island / 状态栏下返回按钮不被遮挡
 - **iOS 动量滚动**：全局 `.touch-scroll` 工具类（`-webkit-overflow-scrolling: touch` + `overscroll-behavior: contain`）应用到菜谱详情、食材详情滚动容器，解决滚动卡顿和 body 橡皮筋穿透
 - **返回按钮可达性**：所有全屏 Sheet 顶部左上角统一返回按钮（`p-2 -m-2` 扩大点击区），`aria-label="返回"` 支持无障碍
+
+### 3.13 食物笔记（DIRECTION-v2 第一刀）
+
+**路由：** `/notes`、`/notes/[food_name_normalized]`
+
+**核心理念（§DIRECTION-v2 §2.1）：** 每种聊到的食物（豆浆、馒头、炒面…）在背后自然生长成一篇 md 笔记。**没有开始、没有结束、没有状态**。用户照常聊天，结构化工作完全在背后。
+
+**数据：**
+- 表 `food_notes`：`(user_id, food_name_normalized)` 唯一；包含 `content_md` 主体、`ingredient_tags[]` 食材标签、`entry_type`（`food` / `technique`）、`cover_image_url`（第一刀不生成）、`updated_at`
+- SQL function `append_food_note(...)`：原子 upsert + 追加 + tag 合并 + bump updated_at
+
+**自动生长管道：**
+- 客户端 30 秒 debounce + tab 关闭时 `sendBeacon` flush（DIRECTION-v2 §6.3 "对话结束后"）
+- 触发 `POST /api/food-notes/extract`，传完整 N 轮对话 → 调用 cheap model（gpt-4o-mini / claude-haiku-4-5）
+- 提取 schema 全部 `.optional()`（CLAUDE.md §2 LLM 输出约束），confidence < 0.7 直接丢弃
+- 追加片段格式：`\n\n---\n\n_yyyy-mm-dd_\n\n${summary}`
+- 失败永不阻塞主流程
+
+**列表页 `/notes`：**
+- 卡片网格按 `updated_at desc` 排序
+- 每卡片：渐变占位封面（基于食物名稳定哈希）/ 食物名 / 相对时间 / 食材标签 chip（最多 3 个 + N）
+- 空状态："还没有食物笔记。继续聊吃的，它们会在这里慢慢生长。"
+- **没有**搜索 / 筛选 / 新建按钮（DIRECTION-v2 §5.3 项目式管理禁用范围）
+
+**详情页 `/notes/[food_name_normalized]`：**
+- 食物名 + 食材标签（**纯展示**，第一刀不可点击 — §7.2 留到下一刀）
+- 内嵌轻量 md 渲染器（headings / lists / `---` / `**bold**` / `_italic_`，零依赖）
+- 编辑（textarea 直改 md → PATCH）/ 删除（带二次确认）
+
+**API：**
+- `POST /api/food-notes/extract` — fire-and-forget 异步抽取，参考 §3.2 taste/extract 模式
+- `PATCH /api/food-notes/[id]` — 用户编辑 / 修正
+- `DELETE /api/food-notes/[id]` — 删除笔记
+
+**第一刀显式不做（§7.2）：** 实时识别 + 笔记上下文注入 / 笔记封面生成 / 标签可点击网络 / 时间线 / 导出 md / Cooking Mode 改造。
 
 ---
 
@@ -615,6 +658,15 @@ AI 智能解析自然语言中的食材信息（批量文本解析）。
 
 位于 `src/lib/ai-service/`，统一封装多个 LLM 提供商。
 
+### 支持的 Provider（通过 `AI_PROVIDER` env 切换）
+
+| Provider | 默认主 model | Cheap model（抽取用） | 备注 |
+|----------|--------------|----------------------|------|
+| `openai` | `gpt-4o` | `gpt-4o-mini` | 走 OpenAI API |
+| `anthropic` | `claude-sonnet-4-6` | `claude-haiku-4-5-20251001` | baseURL 硬编码 `/v1`，避开 ANTHROPIC_BASE_URL 污染 |
+| `deepseek` | `deepseek-v4-flash` | `deepseek-v4-flash` | 用 `@ai-sdk/deepseek`（dedicated provider）。Flash 当默认主 model 因为 V4-Pro 生成结构化菜谱要 60-70s 超 Vercel 60s timeout；Pro 留给后续用户切换 UI。旧 `deepseek-chat` / `deepseek-reasoner` 2026-07-24 下线 |
+| `ollama` | `llama3` | 同主 model | 本地 OpenAI 兼容 |
+
 ### 架构
 
 ```
@@ -671,10 +723,16 @@ src/lib/taste/
 
 - 口味画像同义词映射（"西红柿"→"番茄"）
 
-### 7.2 食材管理增强
+### 7.2 食物笔记下一刀（DIRECTION-v2 §10.2）
 
-- 食材用量扣减（做菜后自动减少库存）
-- 保质期推送提醒通知
+- 实时食物识别 + 笔记上下文注入对话 prompt
+- 笔记封面图生成（共用 Imagen 共享库）
+- 食材标签可点击 → 跨笔记网络视图
+- `food_note_updates` 时间线（区分 ai_append / user_edit / attempt_log / import_ref）
+- Cooking Mode "完成烹饪"按钮改造为「这次做得怎么样」轻量记录
+- 笔记 md 导出按钮
+- 多食物归属处理（一次对话涉及豆浆 + 豆腐时如何分配）
+- 笔记内容长期增长后的折叠 / 摘要展示
 
 ### 7.3 社交功能
 

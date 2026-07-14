@@ -1,7 +1,8 @@
-import { getAIService } from "@/lib/ai-service";
+import { createAIService } from "@/lib/ai-service";
 import type { FatLossTargets } from "@/lib/ai-service/types";
 import { RecipeGenerationRequestSchema } from "@/lib/validators/recipe";
 import { createClient } from "@/lib/supabase/server";
+import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
 export const maxDuration = 60;
 
@@ -44,8 +45,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const providerId = await getUserProviderId(supabase, user?.id);
     const fatLoss = await resolveFatLoss(parsed.data.fatLoss);
-    const service = getAIService();
+    const service = createAIService({ id: providerId });
     const stream = await service.streamRecipe({ ...parsed.data, fatLoss });
     return new Response(stream, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },

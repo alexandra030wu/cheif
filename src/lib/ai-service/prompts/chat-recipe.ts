@@ -16,7 +16,13 @@ const LEVEL_LABELS: Record<string, string> = {
   expert: "大厨",
 };
 
+// DIRECTION-v2 §5.1: stop tagging ingredients with expiry status and stop
+// sorting/recommending by urgency. Functions retained behind the flag in case
+// we re-enable expiry awareness later.
+const SHOW_EXPIRY_PROMPT = false;
+
 function expiryTag(days: number | null): string {
+  if (!SHOW_EXPIRY_PROMPT) return "";
   if (days === null) return "";
   if (days <= 0) return " 🔴已过期";
   if (days <= 3) return " 🟠即将过期";
@@ -30,14 +36,17 @@ function formatIngredientLine(i: ChatIngredient): string {
   return `- ${i.name}${qty}${tag}`;
 }
 
-/** Sort: expired → 3 days → 7 days → rest. Cap at 30 items. */
+/** Cap at 30 items. Order is whatever the caller passed. */
 function sortAndCapIngredients(list: ChatIngredient[]): ChatIngredient[] {
-  const sorted = [...list].sort((a, b) => {
-    const da = a.daysUntilExpiry ?? 9999;
-    const db = b.daysUntilExpiry ?? 9999;
-    return da - db;
-  });
-  return sorted.slice(0, 30);
+  if (SHOW_EXPIRY_PROMPT) {
+    const sorted = [...list].sort((a, b) => {
+      const da = a.daysUntilExpiry ?? 9999;
+      const db = b.daysUntilExpiry ?? 9999;
+      return da - db;
+    });
+    return sorted.slice(0, 30);
+  }
+  return list.slice(0, 30);
 }
 
 // ── difficulty constraints ───────────────────────────────────
@@ -227,7 +236,10 @@ const FEW_SHOT = `
 
 // ── main builder ─────────────────────────────────────────────
 
-export function buildChatRecipePrompt(input: ChatRecipeInput): string {
+export function buildChatRecipePrompt(input: ChatRecipeInput): {
+  system: string;
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+} {
   const time = TIME_LABELS[input.timeOfDay] ?? "现在";
   const prefs = input.preferences;
   const nickname = prefs?.nickname || "朋友";
@@ -237,9 +249,10 @@ export function buildChatRecipePrompt(input: ChatRecipeInput): string {
 
   const sorted = sortAndCapIngredients(input.ingredients);
   const hasIngredients = sorted.length > 0;
-  const hasUrgent = sorted.some(
-    (i) => i.daysUntilExpiry !== null && i.daysUntilExpiry <= 7,
-  );
+  // DIRECTION-v2 §5.1: no longer surface "urgent expiry" as a recommendation signal.
+  const hasUrgent = SHOW_EXPIRY_PROMPT
+    ? sorted.some((i) => i.daysUntilExpiry !== null && i.daysUntilExpiry <= 7)
+    : false;
 
   const ingredientBlock = hasIngredients
     ? sorted.map(formatIngredientLine).join("\n")
@@ -270,7 +283,7 @@ export function buildChatRecipePrompt(input: ChatRecipeInput): string {
       : undefined,
   );
 
-  const prompt = `你是蛋厨（dan.chef）—— 一个温暖、有个性的智能烹饪助手。你的使命是让每个人都能轻松做出好吃的饭菜。
+  const system = `你是蛋厨（dan.chef）—— 一个温暖、有个性的智能烹饪助手。你的使命是让每个人都能轻松做出好吃的饭菜。
 
 ## 你的性格
 - 像一个热心但不啰嗦的朋友，说话自然、有趣，偶尔调皮
@@ -294,9 +307,6 @@ ${ingredientBlock}
 ## 当前时段
 ${time}
 
-## 用户说
-「${input.message}」
-
 ---
 
 ## 菜谱生成规则
@@ -308,20 +318,28 @@ ${time}
 4. 每步操作必须有 durationSeconds（预估秒数）
 5. 用可观察的感官指标描述完成标志（如"翻炒至洋葱变透明"而非"翻炒几分钟"）
 6. 需要时明确火候（大火爆炒 / 中小火焖煮 / 小火慢熬）
-7. 推荐菜谱时优先消耗临期/过期食材，并在 tags 中加入"消耗临期食材"
-8. 每道菜谱必须包含 nutritionEstimate（粗略估算：calories, proteinG, carbsG, fatG）
-9. 可以假设用户有基本调料（盐、酱油、醋、食用油、糖）
-10. 按「${servings}」的份量设计用量
+7. 每道菜谱必须包含 nutritionEstimate（粗略估算：calories, proteinG, carbsG, fatG）
+8. 可以假设用户有基本调料（盐、酱油、醋、食用油、糖）
+9. 按「${servings}」的份量设计用量
 ${fatLossBlock ? `\n${fatLossBlock}\n` : ""}
 ${difficultyBlock(cookingLevel)}
 
 ### 输出格式
 - 在 reply 字段用简短友好的中文回复用户（1-2句话）
 - 在 recipes 数组中给出 2-3 道结构化菜谱，风格差异化（如一道快手 + 一道稍复杂 + 一道创意）
-${hasIngredients ? "- 只从用户的食材库中选取，每道菜选取合理搭配的食材，不需要全部用上" : "- 用户还没有录入食材，请推荐 2-3 道常见家常菜，并在 reply 中建议用户去食材库添加食材以获得更精准的推荐"}
+- 每道菜谱提供 coverImageDescription：**英文**的成品照片描述（一句话，给文生图模型用）。描述成品的真实形态和器皿——饮品/冰沙在玻璃杯里、汤在碗里、炒菜在盘里，写清主要食材的视觉特征和颜色。例如 "A tall glass of vibrant green matcha kale smoothie topped with a dusting of matcha powder"
+
+### 食材选择优先级（**重要**）
+1. **用户消息里明确提到的食物 / 食材是第一优先级**：如果用户在最近的对话里提到了一种具体食物（如"鸡枞菌"、"豆腐"、"乌冬"），即使**冰箱里没有**，也要围绕这种食物推荐 2-3 道菜。这是用户表达的真实意图，比冰箱库存更重要。
+   - 在 reply 里轻量提醒一下："冰箱里好像没看到鸡枞菌，要买一点回来哦"
+   - 不要因为冰箱没有就替换成完全无关的食材（用户问 X 你给 Y 是糟糕体验）
+2. **冰箱有的食材作为补充**：上面的主食物 + 冰箱里能搭配的食材，组合出菜谱
+3. **完全没有线索时**才退化到"用冰箱食材推荐家常菜"
+${hasIngredients ? "" : "\n- 用户还没有录入食材，请推荐 2-3 道常见家常菜，并在 reply 中建议用户去食材库添加食材以获得更精准的推荐"}
 ${hasUrgent ? "- 尽量优先消耗带有过期标记的食材" : ""}
 
 ### 对话智能
+- **下方 messages 是真实的多轮对话历史，请把它当成连续聊天，不要装作不记得**
 - 如果用户的请求太模糊（如只说"做点吃的"），先在 reply 中简短追问 1 个关键问题并给出 2-3 个选项，同时仍然在 recipes 中给出推荐
 - 如果用户提到情绪或状态（"好累"/"今天心情好"/"加班到现在"），先在 reply 中共情一句，再适配推荐：
   - 累了/加班 → 快手15分钟内的菜
@@ -335,5 +353,10 @@ ${hasUrgent ? "- 尽量优先消耗带有过期标记的食材" : ""}
 
 ${FEW_SHOT}${fatLossBlock ? "\n注意：以上示例仅示范输出格式和质量标准；减脂模式下，菜品选择、用油量和热量必须服从「减脂模式」硬约束。" : ""}`;
 
-  return prompt;
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    ...(input.history ?? []),
+    { role: "user", content: input.message },
+  ];
+
+  return { system, messages };
 }

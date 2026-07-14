@@ -22,6 +22,7 @@ async function SettingsLoader() {
     fat_loss_mode: false,
     daily_calorie_target: null,
     daily_protein_target_g: null,
+    ai_model_preference: "claude",
   };
 
   let tasteProfile: TasteProfile = EMPTY_TASTE_PROFILE;
@@ -47,6 +48,8 @@ async function SettingsLoader() {
         fat_loss_mode: profile.fat_loss_mode ?? false,
         daily_calorie_target: profile.daily_calorie_target ?? null,
         daily_protein_target_g: profile.daily_protein_target_g ?? null,
+        ai_model_preference:
+          profile.ai_model_preference === "deepseek" ? "deepseek" : "claude",
       };
       tasteProfile = (profile.taste_profile as TasteProfile | null) ?? EMPTY_TASTE_PROFILE;
     }
