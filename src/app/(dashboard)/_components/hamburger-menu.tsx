@@ -119,7 +119,7 @@ export function HamburgerMenu({ userEmail }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-gray-100">
           <div>
-            <span className="text-lg font-bold tracking-tight text-gray-900">Cheif</span>
+            <span className="text-lg font-bold tracking-tight text-gray-900">DanChef</span>
             <p className="text-xs text-gray-400 mt-0.5">智能厨房助手</p>
           </div>
           <button

@@ -13,7 +13,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm space-y-6 p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">注册 Cheif</h1>
+          <h1 className="text-2xl font-bold">注册 DanChef</h1>
           <p className="text-sm text-gray-400 mt-1">创建你的厨房账号</p>
         </div>
 

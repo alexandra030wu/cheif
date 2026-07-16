@@ -1,6 +1,6 @@
 {
-  "name": "Cheif — 智能厨房助手",
-  "short_name": "Cheif",
+  "name": "DanChef — 智能厨房助手",
+  "short_name": "DanChef",
   "description": "AI 驱动的食材管理与菜谱生成应用",
   "start_url": "/chat",
   "display": "standalone",
