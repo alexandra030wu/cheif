@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cheif — 智能厨房助手",
+  title: "DanChef — 智能厨房助手",
   description: "AI 驱动的食材管理与菜谱生成应用",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Cheif",
+    title: "DanChef",
   },
 };
 
