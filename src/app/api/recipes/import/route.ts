@@ -77,10 +77,20 @@ export async function POST(request: Request) {
       return Response.json({ recipe: object });
     }
 
+    // 文稿提取是低创造性任务,速度优先:8000 字长文稿(视频转写)+ Sonnet
+    // 输出完整菜谱会顶穿 Vercel Hobby 60s 上限(实测小高姐法棍视频超时被
+    // 杀)。Anthropic 换 Haiku 提取,快 3-5×,提取质量足够;DeepSeek
+    // V4-Flash 本来就快,不动。maxOutputTokens 兜底防 runaway。
+    const textConfig =
+      config.id === "anthropic"
+        ? { ...config, model: "claude-haiku-4-5" }
+        : config;
+    const textModel = createLanguageModelProvider(textConfig);
     const { object } = await generateObject({
-      model,
+      model: textModel,
       schema: ImportedRecipeSchema,
       temperature: 0.2,
+      maxOutputTokens: 4096,
       prompt: buildTextExtractionPrompt(parsed.data.text),
     });
     return Response.json({ recipe: object });
