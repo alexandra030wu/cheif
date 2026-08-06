@@ -63,8 +63,13 @@ export const ChatInput = memo(function ChatInput({
   }
 
   return (
-    // Claude 客户端式:无底色横条,输入是一枚浮在画布上的圆角容器,发送钮在框内
-    <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pointer-events-none">
+    // Claude 客户端式:输入是一枚浮在画布上的圆角容器,发送钮在框内。
+    // 过渡分两层:上缘毛玻璃渐变(规格与顶栏一致)遮住滑过的历史消息;
+    // 输入框下沿到窗口底边为纯实色,不透任何文字。
+    <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+      <div className="absolute inset-x-0 -top-7 bottom-0 backdrop-blur-md bg-canvas/70 [mask-image:linear-gradient(to_top,black_55%,transparent)]" />
+      <div className="absolute inset-x-0 bottom-0 h-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-canvas" />
+      <div className="relative px-3 pb-3">
       <div className="mx-auto max-w-2xl pointer-events-auto">
         <div className="flex items-end gap-1 rounded-[22px] bg-surface ring-1 ring-black/5 shadow-soft px-2 py-1.5 focus-within:ring-ink/15 transition-shadow">
         {accessory && <div className="shrink-0 mb-1 ml-1">{accessory}</div>}
@@ -100,7 +105,8 @@ export const ChatInput = memo(function ChatInput({
         </button>
         </div>
       </div>
-      <div className="h-[env(safe-area-inset-bottom)]" />
+      </div>
+      <div className="relative h-[env(safe-area-inset-bottom)]" />
     </div>
   );
 });

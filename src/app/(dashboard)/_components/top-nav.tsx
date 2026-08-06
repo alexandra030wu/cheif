@@ -21,9 +21,10 @@ export function TopNav(_props: { userEmail: string }) {
   const pathname = usePathname();
   return (
     <header className="hidden md:block sticky top-0 z-40">
-      {/* 整条磨砂过渡:滚到胶囊下的内容被模糊并向下渐隐(iOS 顶栏质感) */}
-      <div className="absolute inset-x-0 top-0 -bottom-5 backdrop-blur-md bg-canvas/60 [mask-image:linear-gradient(to_bottom,black_65%,transparent)] pointer-events-none" />
-      <div className="relative px-5 pt-3 pb-2">
+      {/* 整条磨砂过渡:滚到胶囊下的内容被模糊并向下渐隐(iOS 顶栏质感)。
+          渐变规格与输入框上缘的过渡层保持一致(blur-md + canvas/70 + 55% 起渐隐) */}
+      <div className="absolute inset-x-0 top-0 -bottom-7 backdrop-blur-md bg-canvas/70 [mask-image:linear-gradient(to_bottom,black_55%,transparent)] pointer-events-none" />
+      <div className="relative px-5 pt-1.5 pb-2">
       <div className="mx-auto w-full max-w-3xl glass-frosted rounded-full shadow-soft grid grid-cols-[1fr_auto_1fr] items-center gap-3 pl-3 pr-3 py-1.5">
         {/* logo 位:squircle 图标(将来换正式 logo)+ 字标 */}
         <Link href="/chat" className="flex items-center gap-2 shrink-0">
