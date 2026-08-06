@@ -505,7 +505,10 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:h-[calc(100vh-64px)]">
+    // 桌面端:滚动容器铺满整个窗口(fixed inset-0),内容列在里面居中 —
+    // 这样文字能一路滚到窗口顶,穿过顶栏渐变层渐隐(而不是在列顶被硬裁),
+    // 滚动条也落在窗口最右缘。顶栏 z-40 盖在本层之上。
+    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:fixed md:inset-0 md:h-auto">
       {/* Header */}
       {/* 移动端:玻璃标题条;桌面端:顶栏胶囊已代劳,这里只留右上角用量徽章 */}
       <header className="md:hidden shrink-0 flex items-center py-3 border-b border-pebble/50 glass-frost pl-12 pr-3">
@@ -514,8 +517,9 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl) */}
-        <div className="mx-auto w-full max-w-2xl">
+        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl)。
+            pt-16 在内容里(随滚动移出),给顶栏胶囊让出初始位置 */}
+        <div className="mx-auto w-full max-w-2xl md:pt-16">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full px-6">
             <p className="text-base text-ink-muted font-light">
