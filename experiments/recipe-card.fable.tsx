@@ -1,7 +1,6 @@
 "use client";
 
-/* recipe-card · DanOS 设计语言版(v2,danos-skin)
- * 归因实验胜出稿(2026-08-03 盲评);规范:DanShots/docs/danos-design-language.md
+/* recipe-card · DanOS 重设计(Fable 版,归因实验 B 侧)
  * 设计决策:
  * 1. 标题撤出黑色压边浮层 → 卡身内 overline(菜系眉题)+ 13px semibold ink 标题,
  *    封面还给食物本身(DanOS「素材即封面」,参照音乐/想读卡)

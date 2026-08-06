@@ -11,12 +11,12 @@ export async function IngredientList() {
 
   if (!ingredients || ingredients.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400">
+      <div className="text-center py-16 text-ink-muted">
         <p className="text-4xl mb-3">🥦</p>
-        <p className="text-sm">还没有食材，先添加几样吧</p>
+        <p className="text-[12px]">还没有食材，先添加几样吧</p>
         <Link
           href="/kitchen/add"
-          className="mt-4 inline-block text-sm text-gray-900 underline underline-offset-2"
+          className="mt-4 inline-block text-[12px] text-ink underline underline-offset-2"
         >
           添加第一个食材
         </Link>

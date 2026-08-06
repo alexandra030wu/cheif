@@ -13,26 +13,26 @@ export default function AddIngredientPage() {
   const [mode, setMode] = useState<InputMode | null>(null);
 
   return (
-    <div className="px-4 py-6 md:p-8 max-w-lg pt-14">
+    <div className="px-4 py-6 md:p-8 max-w-lg pt-14 bg-canvas">
       {/* Header */}
       <div className="mb-6">
         {mode ? (
           <button
             type="button"
             onClick={() => setMode(null)}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-xs text-ink-muted hover:text-ink-soft transition-colors"
           >
             ← 返回选择
           </button>
         ) : (
           <Link
             href="/kitchen"
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-xs text-ink-muted hover:text-ink-soft transition-colors"
           >
             ← 返回食材库
           </Link>
         )}
-        <h1 className="text-2xl font-bold text-gray-900 mt-3">添加食材</h1>
+        <h1 className="text-[22px] font-bold text-ink mt-3">添加食材</h1>
       </div>
 
       {/* Content */}
@@ -41,7 +41,7 @@ export default function AddIngredientPage() {
       )}
 
       {mode === "manual" && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 md:p-6">
+        <div className="rounded-3xl bg-surface shadow-soft p-4 md:p-6">
           <AddIngredientForm onBack={() => setMode(null)} />
         </div>
       )}
@@ -52,7 +52,7 @@ export default function AddIngredientPage() {
             <div className="flex items-center justify-center py-16">
               <div className="text-center">
                 <p className="text-3xl mb-2">🎤</p>
-                <p className="text-sm text-gray-400">加载中...</p>
+                <p className="text-[11px] text-ink-muted">加载中...</p>
               </div>
             </div>
           }

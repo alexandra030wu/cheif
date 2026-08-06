@@ -6,7 +6,6 @@ import { useChatStore, type ChatMessage } from "@/stores/chat-store";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { RecipeDetailSheet } from "./recipe-detail-sheet";
-import { UsageBadge } from "./usage-badge";
 
 type TimeOfDay = "morning" | "noon" | "evening" | "latenight";
 
@@ -506,18 +505,20 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))]">
+    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:h-[calc(100vh-64px)]">
       {/* Header */}
-      <header className="shrink-0 flex items-center py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm pl-12 pr-3">
-        <span className="text-base font-bold text-gray-900">蛋厨</span>
-        <UsageBadge />
+      {/* 移动端:玻璃标题条;桌面端:顶栏胶囊已代劳,这里只留右上角用量徽章 */}
+      <header className="md:hidden shrink-0 flex items-center py-3 border-b border-pebble/50 glass-frost pl-12 pr-3">
+        <span className="text-base font-logo text-ink">蛋厨</span>
       </header>
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl) */}
+        <div className="mx-auto w-full max-w-2xl">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full px-6">
-            <p className="text-base text-gray-400 font-light">
+            <p className="text-base text-ink-muted font-light">
               今天聊点什么？
             </p>
           </div>
@@ -531,20 +532,20 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                   type="button"
                   onClick={loadOlder}
                   disabled={loadingOlder}
-                  className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-full border border-gray-200 bg-white disabled:opacity-50"
+                  className="text-xs text-ink-muted hover:text-ink px-3 py-1.5 rounded-full border border-pebble/60 bg-surface/70 disabled:opacity-50 transition"
                 >
                   {loadingOlder ? "加载中…" : "↑ 加载更早消息"}
                 </button>
               </div>
             )}
             {olderExhausted && messages.length > 0 && (
-              <div className="text-center text-[11px] text-gray-300 py-2 select-none">
+              <div className="text-center text-[10px] uppercase tracking-wider text-ink-muted/60 py-2 select-none">
                 已经是最早一条
               </div>
             )}
             {dayGroups.map((group) => (
               <Fragment key={group.day}>
-                <div className="text-center text-[11px] text-gray-300 my-3 select-none">
+                <div className="text-center text-[10px] uppercase tracking-wider text-ink-muted/60 my-3 select-none">
                   {group.label}
                 </div>
                 {group.items.map((msg) => (
@@ -566,10 +567,10 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                 (messages[messages.length - 1]?.content?.length ?? 0) > 0
               ) && (
                 <div className="px-4">
-                  <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-md bg-white border border-gray-100 px-4 py-3 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+                  <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-md bg-surface px-4 py-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:300ms]" />
                   </div>
                 </div>
               )}
@@ -578,7 +579,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
             <div className="h-16" />
           </div>
         )}
-      </div>
+      </div></div>
 
       {/* Input */}
       <ChatInput

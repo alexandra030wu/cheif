@@ -102,6 +102,9 @@ function useSwipe(onLeft: () => void, onRight: () => void) {
 }
 
 // ── Main Component ────────────────────────────────────────────
+// 暗屏设计决策(2026-08-03,DanOS 换肤):厨房场景保持深色(暗光/防误触),
+// 但色相从冷灰黑换成「暖墨暗面」#1c1a17 系 — DanOS 暖中性色的深色端。
+// 此处为刻意的局部色板(不进全局 token);将来若做完整暗色系统再吸收。
 export function CookingMode({ recipe, onClose }: Props) {
   const [step, setStep] = useState(0);
   const steps = recipe.steps;
@@ -156,7 +159,7 @@ export function CookingMode({ recipe, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col bg-gray-950 text-white select-none"
+      className="fixed inset-0 z-[60] flex flex-col bg-[#1c1a17] text-[#f5f3ef] select-none"
       {...swipe}
     >
       {/* Progress bar */}
@@ -164,9 +167,9 @@ export function CookingMode({ recipe, onClose }: Props) {
         className="shrink-0"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="h-1 bg-gray-800">
+        <div className="h-1 bg-[#35312b]">
           <div
-            className="h-full bg-white transition-all duration-300 ease-out"
+            className="h-full bg-[#f5f3ef] transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -174,17 +177,17 @@ export function CookingMode({ recipe, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 -m-2 text-gray-400 hover:text-white active:text-gray-300 transition-colors"
+            className="rounded-full p-2 -m-2 text-[#a09a91] hover:text-[#f5f3ef] active:text-[#cfc9c0] transition-colors"
             aria-label="退出"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-gray-400">
+          <span className="text-sm font-medium text-[#a09a91]">
             {recipe.title}
           </span>
-          <span className="text-sm font-mono text-gray-500">
+          <span className="text-sm font-mono text-[#867f75]">
             {step + 1}/{total}
           </span>
         </div>
@@ -193,7 +196,7 @@ export function CookingMode({ recipe, onClose }: Props) {
       {/* Step content — main area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 gap-8 overflow-hidden">
         {/* Step number */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-full border-2 border-gray-700 text-2xl font-bold text-gray-300">
+        <div className="flex items-center justify-center w-14 h-14 rounded-full border-2 border-[#443f38] text-2xl font-bold text-[#cfc9c0]">
           {current.order}
         </div>
 
@@ -204,7 +207,7 @@ export function CookingMode({ recipe, onClose }: Props) {
 
         {/* Tip */}
         {current.tip && (
-          <p className="text-sm text-amber-400/80 text-center max-w-md">
+          <p className="text-sm text-[#e0bd7c] text-center max-w-md">
             💡 {current.tip}
           </p>
         )}
@@ -217,15 +220,15 @@ export function CookingMode({ recipe, onClose }: Props) {
               onClick={timer.toggle}
               className={`rounded-2xl px-8 py-4 text-3xl font-mono font-bold transition-colors ${
                 timer.finished
-                  ? "bg-green-600 text-white animate-pulse"
+                  ? "bg-ok text-white animate-pulse"
                   : timer.running
-                  ? "bg-amber-600 text-white"
-                  : "bg-gray-800 text-gray-200 hover:bg-gray-700 active:bg-gray-600"
+                  ? "bg-[#a8792b] text-white"
+                  : "bg-[#2b2823] text-[#e5e1da] hover:bg-[#35312b] active:bg-[#403b34]"
               }`}
             >
               {timer.finished ? "时间到!" : formatTime(timer.remaining)}
             </button>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-4 text-xs text-[#867f75]">
               <span>
                 {timer.running ? "点击暂停" : timer.finished ? "点击重置" : "点击开始计时"}
               </span>
@@ -233,7 +236,7 @@ export function CookingMode({ recipe, onClose }: Props) {
                 <button
                   type="button"
                   onClick={timer.reset}
-                  className="underline text-gray-500 hover:text-gray-300"
+                  className="underline text-[#867f75] hover:text-[#cfc9c0]"
                 >
                   重置
                 </button>
@@ -249,7 +252,7 @@ export function CookingMode({ recipe, onClose }: Props) {
           <button
             type="button"
             onClick={handleFinish}
-            className="w-full rounded-2xl bg-white text-gray-900 py-4 text-base font-semibold active:bg-gray-200 transition-colors"
+            className="w-full rounded-2xl bg-[#f5f3ef] text-ink py-4 text-base font-semibold active:bg-[#e2ddd4] transition-colors"
           >
             完成烹饪
           </button>
@@ -259,14 +262,14 @@ export function CookingMode({ recipe, onClose }: Props) {
               type="button"
               onClick={goPrev}
               disabled={step === 0}
-              className="flex-1 rounded-2xl border border-gray-700 py-4 text-base font-medium text-gray-300 disabled:opacity-20 active:bg-gray-800 transition-colors"
+              className="flex-1 rounded-2xl border border-[#443f38] py-4 text-base font-medium text-[#cfc9c0] disabled:opacity-20 active:bg-[#2b2823] transition-colors"
             >
               上一步
             </button>
             <button
               type="button"
               onClick={goNext}
-              className="flex-1 rounded-2xl bg-white text-gray-900 py-4 text-base font-semibold active:bg-gray-200 transition-colors"
+              className="flex-1 rounded-2xl bg-[#f5f3ef] text-ink py-4 text-base font-semibold active:bg-[#e2ddd4] transition-colors"
             >
               下一步
             </button>

@@ -25,7 +25,7 @@ interface Props {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 md:px-2 md:py-1.5 text-base md:text-sm text-gray-900 focus:border-gray-400 focus:outline-none transition-colors";
+  "w-full rounded-lg border border-pebble bg-pebble/30 px-2.5 py-2 md:px-2 md:py-1.5 text-base md:text-sm text-ink focus:border-ink/30 focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ink/20 transition-colors";
 
 export function IngredientConfirmList({
   items,
@@ -43,15 +43,15 @@ export function IngredientConfirmList({
     <div className="space-y-4">
       {/* Header */}
       {items.length > 0 && (
-        <p className="text-sm font-medium text-gray-700">
+        <p className="text-[12px] font-medium text-ink-soft">
           已识别 {items.length} 种食材
         </p>
       )}
 
       {/* Loading indicator */}
       {loading && (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+        <div className="flex items-center gap-2 text-[12px] text-ink-muted">
+          <span className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-pulse" />
           识别中...
         </div>
       )}
@@ -62,8 +62,8 @@ export function IngredientConfirmList({
           {items.map((item) => (
             <div
               key={item.id}
-              className={`rounded-lg border bg-white p-3 flex items-start gap-3 transition-opacity ${
-                item.checked ? "border-gray-100" : "border-gray-100 opacity-50"
+              className={`rounded-xl border bg-surface p-3 flex items-start gap-3 transition-opacity ${
+                item.checked ? "border-pebble/60" : "border-pebble/60 opacity-50"
               }`}
             >
               {/* Checkbox */}
@@ -75,12 +75,12 @@ export function IngredientConfirmList({
                 <span
                   className={`flex items-center justify-center w-5 h-5 rounded border transition-colors ${
                     item.checked
-                      ? "bg-gray-900 border-gray-900 text-white"
-                      : "border-gray-300 text-transparent"
+                      ? "bg-ink border-ink text-white"
+                      : "border-pebble text-transparent"
                   }`}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                    <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                    <path d="M20 6 9 17l-5-5" />
                   </svg>
                 </span>
               </button>
@@ -129,7 +129,7 @@ export function IngredientConfirmList({
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 shrink-0">到期</span>
+                  <span className="text-[11px] text-ink-muted shrink-0">到期</span>
                   <input
                     type="date"
                     value={item.expiry_date ?? ""}
@@ -145,10 +145,11 @@ export function IngredientConfirmList({
               <button
                 type="button"
                 onClick={() => onRemove(item.id)}
-                className="shrink-0 mt-0.5 p-1 text-gray-300 hover:text-red-400 transition-colors"
+                className="shrink-0 mt-0.5 rounded-lg p-1 text-ink-muted hover:text-danger hover:bg-danger/10 transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
                 </svg>
               </button>
             </div>
@@ -158,37 +159,37 @@ export function IngredientConfirmList({
 
       {/* Item list — desktop table */}
       {items.length > 0 && (
-        <div className="hidden md:block rounded-lg border border-gray-100 overflow-hidden">
+        <div className="hidden md:block rounded-xl border border-pebble/60 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
+              <tr className="bg-surface-dim border-b border-pebble/60">
                 <th className="px-2 py-2 w-8" />
-                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs">名称</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-20">数量</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-20">单位</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-28">分类</th>
-                <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs w-32">到期日</th>
+                <th className="px-2 py-2 text-left font-medium text-ink-muted text-[11px]">名称</th>
+                <th className="px-2 py-2 text-left font-medium text-ink-muted text-[11px] w-20">数量</th>
+                <th className="px-2 py-2 text-left font-medium text-ink-muted text-[11px] w-20">单位</th>
+                <th className="px-2 py-2 text-left font-medium text-ink-muted text-[11px] w-28">分类</th>
+                <th className="px-2 py-2 text-left font-medium text-ink-muted text-[11px] w-32">到期日</th>
                 <th className="px-2 py-2 w-8" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-pebble/40">
               {items.map((item) => (
                 <tr
                   key={item.id}
-                  className={`bg-white hover:bg-gray-50/50 ${item.checked ? "" : "opacity-50"}`}
+                  className={`bg-surface hover:bg-surface-dim/50 ${item.checked ? "" : "opacity-50"}`}
                 >
                   <td className="px-2 py-1.5 text-center">
                     <button type="button" onClick={() => onToggle(item.id)}>
                       <span
                         className={`flex items-center justify-center w-4 h-4 rounded border transition-colors ${
                           item.checked
-                            ? "bg-gray-900 border-gray-900 text-white"
-                            : "border-gray-300"
+                            ? "bg-ink border-ink text-white"
+                            : "border-pebble"
                         }`}
                       >
                         {item.checked && (
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                            <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                            <path d="M20 6 9 17l-5-5" />
                           </svg>
                         )}
                       </span>
@@ -232,7 +233,7 @@ export function IngredientConfirmList({
                     />
                   </td>
                   <td className="px-2 py-1.5">
-                    <button type="button" onClick={() => onRemove(item.id)} className="text-gray-300 hover:text-red-400 transition-colors">
+                    <button type="button" onClick={() => onRemove(item.id)} className="text-ink-muted hover:text-danger transition-colors">
                       &times;
                     </button>
                   </td>
@@ -249,16 +250,16 @@ export function IngredientConfirmList({
           type="button"
           onClick={onSave}
           disabled={saving || checkedCount === 0}
-          className="w-full rounded-xl bg-gray-900 py-3 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 transition-colors"
+          className="w-full rounded-full bg-ink py-3 text-[13px] font-medium text-white hover:bg-ink/90 active:bg-ink/80 disabled:opacity-50 transition-colors"
         >
           {saving ? "入库中..." : `全部入库 (${checkedCount})`}
         </button>
       )}
 
       {savedCount > 0 && (
-        <p className="text-center text-sm text-gray-400">
+        <p className="text-center text-[11px] text-ink-muted">
           已添加 {savedCount} 个 ·{" "}
-          <Link href="/kitchen" className="text-gray-900 underline underline-offset-2">
+          <Link href="/kitchen" className="text-ink underline underline-offset-2">
             查看食材库
           </Link>
         </p>

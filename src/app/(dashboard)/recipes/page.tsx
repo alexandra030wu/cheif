@@ -15,17 +15,17 @@ async function SavedRecipeLoader() {
 
   if (!savedRecipes || savedRecipes.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400">
+      <div className="text-center py-16 text-ink-muted">
         <p className="text-4xl mb-3">📖</p>
-        <p className="text-sm">还没有收藏的菜谱</p>
+        <p className="text-[12px]">还没有收藏的菜谱</p>
         <div className="mt-4 flex items-center justify-center gap-3">
           <Link
             href="/chat"
-            className="text-sm text-gray-900 underline underline-offset-2"
+            className="text-[12px] text-ink underline underline-offset-2"
           >
             去聊天页生成
           </Link>
-          <span className="text-gray-300">·</span>
+          <span className="text-ink-muted">·</span>
           <ImportRecipeButton variant="cta" />
         </div>
       </div>
@@ -86,10 +86,10 @@ async function SavedRecipeLoader() {
 function ListSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-4 w-24 bg-gray-100 rounded mt-1 mb-6" />
+      <div className="h-4 w-24 bg-surface-dim rounded mt-1 mb-6" />
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-24 bg-gray-100 rounded-xl" />
+          <div key={i} className="h-24 bg-surface-dim rounded-3xl" />
         ))}
       </div>
     </div>
@@ -98,9 +98,9 @@ function ListSkeleton() {
 
 export default function RecipesPage() {
   return (
-    <div className="px-4 py-6 md:p-8 max-w-2xl pt-14">
+    <div className="bg-canvas px-4 py-6 md:p-8 max-w-2xl pt-14">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold text-gray-900">收藏菜谱</h1>
+        <h1 className="text-[22px] font-bold text-ink">收藏菜谱</h1>
         <ImportRecipeButton />
       </div>
       <Suspense fallback={<ListSkeleton />}>

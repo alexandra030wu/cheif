@@ -4,6 +4,8 @@ import { useState, useCallback } from "react";
 import type { TasteProfile } from "@/lib/taste";
 import { addTasteSignal, deleteTasteSignal, clearAllTasteData } from "../taste-actions";
 
+// 统一用 ink/danger 两色区分「喜欢」与「不爱」，不再按类目分配彩色——
+// 与 DanOS 铁律一致：可点的东西只用墨色，功能色只做浅底徽章。
 const SIGNAL_CATEGORIES: {
   label: string;
   likeType: string;
@@ -18,7 +20,7 @@ const SIGNAL_CATEGORIES: {
     dislikeType: "dislike_dish",
     likeKey: "liked_dishes",
     dislikeKey: "disliked_dishes",
-    color: { like: "bg-orange-100 text-orange-800", dislike: "bg-red-100 text-red-800" },
+    color: { like: "bg-surface-dim text-ink-soft", dislike: "bg-danger/10 text-danger" },
   },
   {
     label: "菜系",
@@ -26,7 +28,7 @@ const SIGNAL_CATEGORIES: {
     dislikeType: "dislike_cuisine",
     likeKey: "liked_cuisines",
     dislikeKey: "disliked_cuisines",
-    color: { like: "bg-purple-100 text-purple-800", dislike: "bg-red-100 text-red-800" },
+    color: { like: "bg-surface-dim text-ink-soft", dislike: "bg-danger/10 text-danger" },
   },
   {
     label: "食材",
@@ -34,7 +36,7 @@ const SIGNAL_CATEGORIES: {
     dislikeType: "dislike_ingredient",
     likeKey: "liked_ingredients",
     dislikeKey: "disliked_ingredients",
-    color: { like: "bg-green-100 text-green-800", dislike: "bg-red-100 text-red-800" },
+    color: { like: "bg-surface-dim text-ink-soft", dislike: "bg-danger/10 text-danger" },
   },
   {
     label: "口味",
@@ -42,13 +44,13 @@ const SIGNAL_CATEGORIES: {
     dislikeType: "dislike_flavor",
     likeKey: "liked_flavors",
     dislikeKey: "disliked_flavors",
-    color: { like: "bg-amber-100 text-amber-800", dislike: "bg-red-100 text-red-800" },
+    color: { like: "bg-surface-dim text-ink-soft", dislike: "bg-danger/10 text-danger" },
   },
 ];
 
 const STYLE_TYPES = [
-  { label: "烹饪风格", type: "cooking_style", key: "cooking_styles" as keyof TasteProfile, color: "bg-blue-100 text-blue-800" },
-  { label: "饮食目标", type: "dietary_goal", key: "dietary_goals" as keyof TasteProfile, color: "bg-teal-100 text-teal-800" },
+  { label: "烹饪风格", type: "cooking_style", key: "cooking_styles" as keyof TasteProfile, color: "bg-surface-dim text-ink-soft" },
+  { label: "饮食目标", type: "dietary_goal", key: "dietary_goals" as keyof TasteProfile, color: "bg-surface-dim text-ink-soft" },
 ];
 
 interface Props {
@@ -119,20 +121,20 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">
+        <h2 className="text-[13px] font-semibold text-ink">
           蛋厨对你的了解
         </h2>
         {hasAnyData && (
-          <span className="text-xs text-gray-400">
+          <span className="text-[11px] text-ink-muted">
             已学习 {profile.signal_count} 条信号
           </span>
         )}
       </div>
 
       {!hasAnyData ? (
-        <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
-          <p className="text-sm text-gray-400 mb-1">还没有口味数据</p>
-          <p className="text-xs text-gray-300">
+        <div className="rounded-xl border border-dashed border-pebble p-6 text-center">
+          <p className="text-[12.5px] text-ink-muted mb-1">还没有口味数据</p>
+          <p className="text-[11px] text-ink-muted/70">
             和蛋厨多聊聊，TA 会慢慢了解你的口味
           </p>
         </div>
@@ -146,11 +148,11 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
             return (
               <div key={cat.label}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-gray-500">{cat.label}</p>
+                  <p className="text-[11px] font-medium text-ink-soft">{cat.label}</p>
                   <button
                     type="button"
                     onClick={() => setAddMode(addMode === cat.likeType ? null : cat.likeType)}
-                    className="text-xs text-gray-400 hover:text-gray-600"
+                    className="text-[11px] text-ink-muted hover:text-ink-soft"
                     disabled={busy}
                   >
                     + 添加
@@ -164,14 +166,14 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={`输入${cat.label}名称`}
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-gray-400 focus:outline-none"
+                      className="flex-1 rounded-lg bg-pebble/30 px-3 py-1.5 text-[12px] text-ink placeholder-ink-muted focus:ring-1 focus:ring-ink/20 focus:outline-none"
                       onKeyDown={(e) => e.key === "Enter" && handleAdd(cat.likeType, cat.likeKey)}
                     />
                     <button
                       type="button"
                       onClick={() => handleAdd(cat.likeType, cat.likeKey)}
                       disabled={busy || !inputValue.trim()}
-                      className="rounded-lg bg-gray-900 text-white px-3 py-1.5 text-xs disabled:opacity-50"
+                      className="rounded-lg bg-ink text-white px-3 py-1.5 text-[11px] disabled:opacity-50"
                     >
                       喜欢
                     </button>
@@ -179,7 +181,7 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
                       type="button"
                       onClick={() => handleAdd(cat.dislikeType, cat.dislikeKey)}
                       disabled={busy || !inputValue.trim()}
-                      className="rounded-lg bg-red-50 text-red-700 px-3 py-1.5 text-xs disabled:opacity-50"
+                      className="rounded-lg bg-danger/10 text-danger px-3 py-1.5 text-[11px] disabled:opacity-50"
                     >
                       不爱
                     </button>
@@ -217,7 +219,7 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
             if (values.length === 0) return null;
             return (
               <div key={st.label}>
-                <p className="text-xs font-medium text-gray-500 mb-2">{st.label}</p>
+                <p className="text-[11px] font-medium text-ink-soft mb-2">{st.label}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {values.map((v) => (
                     <Chip
@@ -243,14 +245,14 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="输入喜欢的菜、口味..."
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
+            className="flex-1 rounded-lg bg-pebble/30 px-3 py-2 text-[12px] text-ink placeholder-ink-muted focus:ring-1 focus:ring-ink/20 focus:outline-none"
             onKeyDown={(e) => e.key === "Enter" && handleAdd("like_dish", "liked_dishes")}
           />
           <button
             type="button"
             onClick={() => handleAdd("like_dish", "liked_dishes")}
             disabled={busy || !inputValue.trim()}
-            className="rounded-lg bg-gray-900 text-white px-4 py-2 text-sm disabled:opacity-50"
+            className="rounded-full bg-ink text-white px-4 py-2 text-[12px] disabled:opacity-50"
           >
             添加
           </button>
@@ -263,7 +265,7 @@ export function TasteProfileSection({ profile: initialProfile }: Props) {
           type="button"
           onClick={handleClearAll}
           disabled={busy}
-          className="text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+          className="text-[11px] text-ink-muted hover:text-danger transition-colors disabled:opacity-50"
         >
           清空所有口味数据
         </button>
@@ -289,7 +291,7 @@ function Chip({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-medium ${className}`}
     >
       {prefix && <span className="opacity-60">{prefix}:</span>}
       {label}

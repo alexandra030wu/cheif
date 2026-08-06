@@ -40,14 +40,14 @@ export const IngredientItem = memo(function IngredientItem({
     SHOW_EXPIRY_UI && expiryTime !== null && !isExpired && !isExpiring3d && expiryTime < now + 7 * 86400000;
 
   const borderColor = selected
-    ? "border-gray-900 ring-1 ring-gray-900"
+    ? "border-ink ring-1 ring-ink"
     : isExpired
-    ? "border-red-200 bg-red-50/40"
+    ? "border-danger/30 bg-danger/5"
     : isExpiring3d
-    ? "border-amber-200 bg-amber-50/40"
+    ? "border-warn/40 bg-warn/10"
     : isExpiring7d
-    ? "border-yellow-200 bg-yellow-50/30"
-    : "border-gray-100";
+    ? "border-warn/20 bg-butter/30"
+    : "border-pebble/60";
 
   const expiryLabel = isExpired
     ? "已过期"
@@ -58,11 +58,11 @@ export const IngredientItem = memo(function IngredientItem({
     : null;
 
   const expiryColor = isExpired
-    ? "text-red-500"
+    ? "text-danger"
     : isExpiring3d
-    ? "text-amber-500"
+    ? "text-warn"
     : isExpiring7d
-    ? "text-yellow-600"
+    ? "text-warn"
     : "";
 
   return (
@@ -71,8 +71,8 @@ export const IngredientItem = memo(function IngredientItem({
       tabIndex={onTap ? 0 : undefined}
       onClick={onTap}
       onKeyDown={onTap ? (e) => { if (e.key === "Enter") onTap(); } : undefined}
-      className={`relative rounded-xl border bg-white p-3 flex flex-col items-center text-center transition-all ${borderColor} ${
-        onTap ? "cursor-pointer active:bg-gray-50 hover:border-gray-200" : ""
+      className={`relative rounded-xl border bg-surface p-3 flex flex-col items-center text-center transition-all ${borderColor} ${
+        onTap ? "cursor-pointer active:bg-surface-dim hover:border-ink/20" : ""
       } ${selected ? "scale-[0.97]" : ""}`}
     >
       {/* Selection checkbox overlay */}
@@ -81,13 +81,13 @@ export const IngredientItem = memo(function IngredientItem({
           <span
             className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors ${
               selected
-                ? "bg-gray-900 border-gray-900 text-white"
-                : "border-gray-300 bg-white/80"
+                ? "bg-ink border-ink text-white"
+                : "border-pebble bg-white/80"
             }`}
           >
             {selected && (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                <path d="M20 6 9 17l-5-5" />
               </svg>
             )}
           </span>
@@ -112,12 +112,12 @@ export const IngredientItem = memo(function IngredientItem({
       </div>
 
       {/* Name */}
-      <p className="text-xs font-medium text-gray-900 truncate w-full leading-tight">
+      <p className="text-[12px] font-medium text-ink truncate w-full leading-tight">
         {name}
       </p>
 
       {/* Quantity or expiry status */}
-      <p className={`text-[10px] mt-0.5 truncate w-full ${expiryLabel ? expiryColor + " font-medium" : "text-gray-400"}`}>
+      <p className={`text-[10px] mt-0.5 truncate w-full ${expiryLabel ? expiryColor + " font-medium" : "text-ink-muted"}`}>
         {expiryLabel
           ? expiryLabel
           : quantity != null

@@ -27,7 +27,7 @@ export const MessageBubble = memo(function MessageBubble({
   if (message.role === "user") {
     return (
       <div className="flex justify-end px-4">
-        <div className="max-w-[80%] rounded-2xl rounded-br-md bg-gray-900 px-4 py-2.5 text-sm text-white">
+        <div className="max-w-[80%] rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-sm text-white">
           {message.content}
         </div>
       </div>
@@ -37,7 +37,7 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div className="px-4 space-y-3">
       {hasContent && (
-        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white border border-gray-100 px-4 py-2.5 text-sm text-gray-800 shadow-sm">
+        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 text-sm text-ink">
           {message.content}
         </div>
       )}

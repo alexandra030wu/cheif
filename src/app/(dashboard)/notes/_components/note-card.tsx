@@ -25,15 +25,16 @@ function formatRelative(iso: string): string {
 // 8-color gradient picker — pseudo-random per name so the same food gets the
 // same gradient between renders. Removes the empty-cover problem until we add
 // real image generation in slice 2.
+// pastel token pairs (DanOS 点缀色,低饱和邻近色相,对齐 recipe-card.tsx 兜底)
 const GRADIENTS = [
-  "from-amber-100 to-orange-200",
-  "from-rose-100 to-pink-200",
-  "from-lime-100 to-emerald-200",
-  "from-sky-100 to-indigo-200",
-  "from-violet-100 to-purple-200",
-  "from-yellow-100 to-amber-200",
-  "from-teal-100 to-cyan-200",
-  "from-fuchsia-100 to-pink-200",
+  "from-butter to-peach",
+  "from-blush to-peach",
+  "from-mint to-sky",
+  "from-sky to-lilac",
+  "from-lilac to-blush",
+  "from-butter to-mint",
+  "from-mint to-sky",
+  "from-blush to-lilac",
 ];
 
 function gradientFor(name: string): string {
@@ -49,7 +50,7 @@ export function NoteCard({ foodName, normalized, tags, updatedAt, coverImageUrl 
   return (
     <Link
       href={`/notes/${encodeURIComponent(normalized)}`}
-      className="group block rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+      className="group block rounded-3xl bg-surface shadow-soft hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-spring overflow-hidden"
     >
       <div
         className={`aspect-square bg-gradient-to-br ${gradientFor(foodName)} flex items-center justify-center`}
@@ -60,26 +61,26 @@ export function NoteCard({ foodName, normalized, tags, updatedAt, coverImageUrl 
         }
       >
         {!coverImageUrl && (
-          <span className="text-2xl font-bold text-white/80 px-2 text-center break-all">
+          <span className="text-2xl font-bold text-ink/50 px-2 text-center break-all">
             {foodName}
           </span>
         )}
       </div>
       <div className="px-3 py-2.5">
-        <p className="text-sm font-medium text-gray-900 truncate">{foodName}</p>
-        <p className="text-[11px] text-gray-400 mt-0.5">{formatRelative(updatedAt)}</p>
+        <p className="text-[13px] font-semibold text-ink truncate">{foodName}</p>
+        <p className="text-[11px] text-ink-muted mt-0.5">{formatRelative(updatedAt)}</p>
         {visibleTags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {visibleTags.map((t) => (
               <span
                 key={t}
-                className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-100"
+                className="text-[10px] px-1.5 py-0.5 rounded-full bg-pebble/40 text-ink-soft border border-pebble/60"
               >
                 {t}
               </span>
             ))}
             {overflow > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 text-gray-400">+{overflow}</span>
+              <span className="text-[10px] px-1.5 py-0.5 text-ink-muted">+{overflow}</span>
             )}
           </div>
         )}

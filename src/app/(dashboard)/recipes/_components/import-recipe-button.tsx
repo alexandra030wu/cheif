@@ -12,8 +12,8 @@ export function ImportRecipeButton({ variant = "header" }: Props) {
 
   const className =
     variant === "header"
-      ? "rounded-lg bg-gray-900 text-white px-3 py-1.5 text-sm font-medium hover:bg-gray-700 active:bg-gray-800 transition-colors"
-      : "text-sm text-gray-900 underline underline-offset-2";
+      ? "rounded-full bg-ink text-white px-3 py-1.5 text-[12.5px] font-medium hover:bg-ink/90 active:bg-ink/80 transition-colors"
+      : "text-[12.5px] text-ink underline underline-offset-2";
 
   return (
     <>

@@ -42,14 +42,14 @@ export const PromptCards = memo(function PromptCards({ onSelect }: Props) {
 
   return (
     <div className="px-4">
-      <p className="text-sm text-gray-400 mb-3 text-center">试试这些：</p>
+      <p className="text-[11px] text-ink-muted mb-3 text-center">试试这些：</p>
       <div className="flex flex-wrap justify-center gap-2">
         {visible.map((card) => (
           <button
             key={card.text}
             type="button"
             onClick={() => onSelect(card.text)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-full border border-pebble/60 bg-surface/70 px-4 py-2.5 text-[12px] font-medium text-ink-soft hover:bg-surface hover:border-ink/30 active:bg-surface-dim transition-colors shadow-soft"
           >
             <span>{card.emoji}</span>
             <span>{card.text}</span>

@@ -29,7 +29,7 @@ export default async function NoteDetailPage({ params }: PageProps) {
       <div className="mb-4">
         <Link
           href="/notes"
-          className="text-xs text-gray-400 hover:text-gray-600 inline-flex items-center gap-1"
+          className="text-xs text-ink-muted hover:text-ink-soft inline-flex items-center gap-1"
         >
           ← 全部笔记
         </Link>

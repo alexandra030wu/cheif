@@ -10,12 +10,9 @@ import { ChatInterface } from "./_components/chat-interface";
 // would render empty even though the DB has fresh history.
 export const dynamic = "force-dynamic";
 
-// Initial-page fetch window: just today (local date midnight).
-function todayStartIso(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
+// 初始加载窗口:最近 50 条(2026-08-03 改,原为"仅今天" — 每天打开像失忆,
+// 与用户长对话哲学冲突;更早的靠滚顶翻页续载)。
+const INITIAL_MESSAGE_COUNT = 50;
 
 async function ChatLoader() {
   const supabase = await createClient();
@@ -48,10 +45,11 @@ async function ChatLoader() {
       .from("messages")
       .select("id, role, content, recipes, created_at")
       .eq("user_id", user.id)
-      .gte("created_at", todayStartIso())
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(INITIAL_MESSAGE_COUNT);
 
     initialMessages = (rawMessages ?? [])
+      .reverse()
       // 过滤掉脏数据：content 空/空白且不带 recipes 的行（老 schema 允许空
       // content 入库，渲染出来是空气泡，且会污染下次 prompt）。
       .filter((m) => {
@@ -109,16 +107,16 @@ async function ChatLoader() {
 function ChatSkeleton() {
   return (
     <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] animate-pulse">
-      <div className="shrink-0 flex items-center justify-center py-3 border-b border-gray-100">
-        <div className="h-5 w-20 bg-gray-200 rounded" />
+      <div className="shrink-0 flex items-center justify-center py-3 border-b border-pebble/60">
+        <div className="h-5 w-20 bg-pebble rounded" />
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-4">
-        <div className="h-12 w-12 bg-gray-100 rounded-full mb-4" />
-        <div className="h-5 w-32 bg-gray-200 rounded mb-2" />
-        <div className="h-4 w-48 bg-gray-100 rounded mb-8" />
+        <div className="h-12 w-12 bg-surface-dim rounded-full mb-4" />
+        <div className="h-5 w-32 bg-pebble rounded mb-2" />
+        <div className="h-4 w-48 bg-surface-dim rounded mb-8" />
         <div className="flex flex-wrap justify-center gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded-full" style={{ width: `${80 + (i % 3) * 20}px` }} />
+            <div key={i} className="h-10 bg-surface-dim rounded-full" style={{ width: `${80 + (i % 3) * 20}px` }} />
           ))}
         </div>
       </div>

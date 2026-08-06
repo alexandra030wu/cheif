@@ -22,7 +22,7 @@ function renderMarkdown(md: string) {
   const flushList = () => {
     if (listBuffer.length === 0) return;
     out.push(
-      <ul key={`ul-${out.length}`} className="list-disc pl-5 my-2 space-y-1 text-gray-700">
+      <ul key={`ul-${out.length}`} className="list-disc pl-5 my-2 space-y-1 text-ink-soft">
         {listBuffer.map((it, i) => (
           <li key={i}>{renderInline(it)}</li>
         ))}
@@ -34,7 +34,7 @@ function renderMarkdown(md: string) {
   lines.forEach((line, i) => {
     if (/^---\s*$/.test(line)) {
       flushList();
-      out.push(<hr key={`hr-${i}`} className="my-4 border-gray-200" />);
+      out.push(<hr key={`hr-${i}`} className="my-4 border-pebble/60" />);
       return;
     }
     const heading = line.match(/^(#{1,3})\s+(.*)$/);
@@ -44,10 +44,10 @@ function renderMarkdown(md: string) {
       const text = heading[2];
       const cls =
         level === 1
-          ? "text-xl font-bold mt-4 mb-2 text-gray-900"
+          ? "text-xl font-bold mt-4 mb-2 text-ink"
           : level === 2
-            ? "text-lg font-semibold mt-3 mb-1.5 text-gray-900"
-            : "text-base font-semibold mt-2 mb-1 text-gray-900";
+            ? "text-lg font-semibold mt-3 mb-1.5 text-ink"
+            : "text-base font-semibold mt-2 mb-1 text-ink";
       out.push(
         <p key={`h-${i}`} className={cls}>
           {renderInline(text)}
@@ -65,7 +65,7 @@ function renderMarkdown(md: string) {
       return;
     }
     out.push(
-      <p key={`p-${i}`} className="text-sm text-gray-700 leading-7">
+      <p key={`p-${i}`} className="text-sm text-ink-soft leading-7">
         {renderInline(line)}
       </p>
     );
@@ -84,7 +84,7 @@ function renderInline(text: string): React.ReactNode {
     if (m.index > last) parts.push(text.slice(last, m.index));
     const tok = m[0];
     if (tok.startsWith("**")) parts.push(<strong key={parts.length}>{tok.slice(2, -2)}</strong>);
-    else parts.push(<em key={parts.length} className="text-gray-500">{tok.slice(1, -1)}</em>);
+    else parts.push(<em key={parts.length} className="text-ink-muted">{tok.slice(1, -1)}</em>);
     last = m.index + tok.length;
   }
   if (last < text.length) parts.push(text.slice(last));
@@ -134,8 +134,8 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900">{foodName}</h1>
-      <p className="text-xs text-gray-400 mt-1">
+      <h1 className="text-[22px] font-bold text-ink">{foodName}</h1>
+      <p className="text-[11px] text-ink-muted mt-1">
         最近更新 {new Date(updatedAt).toISOString().slice(0, 10)}
       </p>
 
@@ -144,7 +144,7 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
           {ingredientTags.map((t) => (
             <span
               key={t}
-              className="text-[11px] px-2 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-100"
+              className="text-[11px] px-2 py-0.5 rounded-full bg-pebble/40 text-ink-soft border border-pebble/60"
             >
               {t}
             </span>
@@ -157,7 +157,7 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="w-full min-h-[300px] p-3 text-sm font-mono leading-6 rounded-lg border border-gray-200 focus:border-gray-400 focus:outline-none"
+            className="w-full min-h-[300px] p-3 text-sm font-mono leading-6 rounded-xl border border-pebble bg-pebble/20 text-ink placeholder-ink-muted focus:border-ink/30 focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ink/20 transition-colors"
             placeholder="还没有内容…"
           />
         ) : (
@@ -165,13 +165,13 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
             {content.trim() ? (
               renderMarkdown(content)
             ) : (
-              <p className="text-sm text-gray-400">这篇笔记还是空的。继续聊就会自然长出来。</p>
+              <p className="text-sm text-ink-muted">这篇笔记还是空的。继续聊就会自然长出来。</p>
             )}
           </div>
         )}
       </div>
 
-      {error && <p className="mt-3 text-xs text-rose-500">{error}</p>}
+      {error && <p className="mt-3 text-xs text-danger">{error}</p>}
 
       <div className="mt-6 flex items-center gap-2">
         {isEditing ? (
@@ -180,7 +180,7 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
               type="button"
               onClick={save}
               disabled={isSaving}
-              className="px-3 py-1.5 text-sm rounded-lg bg-gray-900 text-white disabled:opacity-50"
+              className="px-3 py-1.5 text-sm rounded-full bg-ink text-white hover:bg-ink/90 active:bg-ink/80 transition-colors disabled:opacity-50"
             >
               {isSaving ? "保存中…" : "保存"}
             </button>
@@ -191,7 +191,7 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
                 setIsEditing(false);
                 setError(null);
               }}
-              className="px-3 py-1.5 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+              className="px-3 py-1.5 text-sm rounded-full text-ink-soft hover:bg-surface-dim transition-colors"
             >
               取消
             </button>
@@ -201,14 +201,14 @@ export function NoteDetailClient({ id, foodName, contentMd, ingredientTags, upda
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 text-sm rounded-full border border-pebble text-ink-soft hover:bg-surface-dim transition-colors"
             >
               编辑
             </button>
             <button
               type="button"
               onClick={remove}
-              className="px-3 py-1.5 text-sm rounded-lg text-rose-500 hover:bg-rose-50"
+              className="px-3 py-1.5 text-sm rounded-full text-danger hover:bg-danger/10 transition-colors"
             >
               删除
             </button>

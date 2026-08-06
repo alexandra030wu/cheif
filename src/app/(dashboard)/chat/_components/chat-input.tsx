@@ -7,6 +7,8 @@ interface Props {
   onChange: (value: string) => void;
   onSend: () => void;
   disabled: boolean;
+  /** 框内左下角的附件位(用量徽章等) */
+  accessory?: React.ReactNode;
 }
 
 export const ChatInput = memo(function ChatInput({
@@ -14,9 +16,26 @@ export const ChatInput = memo(function ChatInput({
   onChange,
   onSend,
   disabled,
+  accessory,
 }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const compositionEndAtRef = useRef(0);
+
+  // 焦点管理(2026-08-03 交互迭代):桌面(pointer:fine)挂载即聚焦;
+  // 发送完成(disabled true→false)后回焦 — 连续对话不用摸鼠标。
+  // 移动端不做 autofocus,避免一进页就弹键盘。
+  const isDesktop = () =>
+    typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
+  useEffect(() => {
+    if (isDesktop()) inputRef.current?.focus();
+  }, []);
+  const prevDisabled = useRef(disabled);
+  useEffect(() => {
+    if (prevDisabled.current && !disabled && isDesktop()) {
+      inputRef.current?.focus();
+    }
+    prevDisabled.current = disabled;
+  }, [disabled]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -44,8 +63,11 @@ export const ChatInput = memo(function ChatInput({
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-gray-100 bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto max-w-2xl flex items-end gap-2 px-3 py-2.5">
+    // Claude 客户端式:无底色横条,输入是一枚浮在画布上的圆角容器,发送钮在框内
+    <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pointer-events-none">
+      <div className="mx-auto max-w-2xl pointer-events-auto">
+        <div className="flex items-end gap-1 rounded-[22px] bg-surface ring-1 ring-black/5 shadow-soft px-2 py-1.5 focus-within:ring-ink/15 transition-shadow">
+        {accessory && <div className="shrink-0 mb-1 ml-1">{accessory}</div>}
         <textarea
           ref={inputRef}
           rows={1}
@@ -55,26 +77,28 @@ export const ChatInput = memo(function ChatInput({
           onCompositionEnd={handleCompositionEnd}
           placeholder="想吃什么？告诉我..."
           disabled={disabled}
-          className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-300 focus:bg-white focus:outline-none disabled:opacity-50 transition-colors"
+          className="flex-1 resize-none bg-transparent px-2.5 py-2 text-[13px] text-ink placeholder-ink-muted focus:outline-none disabled:opacity-50"
         />
         <button
           type="button"
           onClick={onSend}
           disabled={!value.trim() || disabled}
-          className="shrink-0 rounded-xl bg-gray-900 p-2.5 text-white disabled:opacity-30 hover:bg-gray-700 active:bg-gray-800 transition-colors"
+          className="shrink-0 rounded-full bg-ink p-2 mb-0.5 text-white disabled:opacity-25 hover:bg-ink/90 active:bg-ink/80 transition-colors"
           aria-label="发送"
         >
           {disabled ? (
-            <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <svg className="w-4.5 h-4.5 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
               <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
             </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
+              <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
+              <path d="m21.854 2.147-10.94 10.939" />
             </svg>
           )}
         </button>
+        </div>
       </div>
       <div className="h-[env(safe-area-inset-bottom)]" />
     </div>

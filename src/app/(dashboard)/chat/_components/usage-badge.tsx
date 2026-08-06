@@ -47,7 +47,7 @@ export function UsageBadge() {
       <button
         type="button"
         disabled
-        className="ml-auto rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-400"
+        className="ml-auto rounded-full bg-surface-dim px-2.5 py-1 text-[11px] text-ink-muted"
       >
         ···
       </button>
@@ -61,7 +61,7 @@ export function UsageBadge() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-200 active:bg-gray-300 transition-colors"
+        className="rounded-full bg-surface-dim px-2.5 py-1 text-[11px] text-ink-soft hover:bg-pebble/60 active:bg-pebble transition-colors"
         aria-label="本月用量"
       >
         本月 {formatTokens(total)}
@@ -74,8 +74,8 @@ export function UsageBadge() {
             onClick={() => setOpen(false)}
             aria-hidden
           />
-          <div className="absolute right-0 top-full mt-2 z-50 w-60 rounded-xl bg-white border border-gray-200 shadow-lg p-3 text-xs space-y-1.5">
-            <div className="font-semibold text-gray-900 pb-1.5 border-b border-gray-100">
+          <div className="absolute right-0 top-full mt-2 z-50 w-60 rounded-2xl bg-surface border border-pebble shadow-soft-lg p-3 text-[11px] space-y-1.5">
+            <div className="font-semibold text-ink pb-1.5 border-b border-pebble/60">
               本月用量
             </div>
             <Row label="输入 tokens" value={usage.inputTokens.toLocaleString()} />
@@ -90,7 +90,7 @@ export function UsageBadge() {
                 value={`${(usage.cacheReadTokens * 0.9).toLocaleString(undefined, { maximumFractionDigits: 0 })} tokens`}
               />
             )}
-            <div className="pt-1.5 mt-1.5 border-t border-gray-100 text-[10px] text-gray-400 leading-snug">
+            <div className="pt-1.5 mt-1.5 border-t border-pebble/60 text-[10px] text-ink-muted leading-snug">
               当前免费试用阶段，不限量
             </div>
           </div>
@@ -112,12 +112,12 @@ function Row({
   return (
     <div
       className={`flex justify-between items-center ${
-        highlight ? "text-emerald-700" : "text-gray-600"
+        highlight ? "text-ok" : "text-ink-soft"
       }`}
     >
       <span>{label}</span>
       <span
-        className={`font-mono ${highlight ? "text-emerald-700 font-semibold" : "text-gray-900"}`}
+        className={`font-mono ${highlight ? "text-ok font-semibold" : "text-ink"}`}
       >
         {value}
       </span>

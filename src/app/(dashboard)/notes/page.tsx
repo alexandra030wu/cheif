@@ -13,7 +13,7 @@ async function NotesLoader() {
 
   if (!notes || notes.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400">
+      <div className="text-center py-16 text-ink-muted">
         <p className="text-4xl mb-3">🌱</p>
         <p className="text-sm leading-6">
           还没有食物笔记。
@@ -21,7 +21,7 @@ async function NotesLoader() {
           继续聊吃的，它们会在这里慢慢生长。
         </p>
         <div className="mt-4">
-          <Link href="/chat" className="text-sm text-gray-900 underline underline-offset-2">
+          <Link href="/chat" className="text-sm text-ink underline underline-offset-2">
             去聊天
           </Link>
         </div>
@@ -49,7 +49,7 @@ function ListSkeleton() {
   return (
     <div className="animate-pulse grid grid-cols-2 gap-3 sm:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-40 bg-gray-100 rounded-xl" />
+        <div key={i} className="h-40 bg-pebble/40 rounded-3xl" />
       ))}
     </div>
   );
@@ -59,8 +59,8 @@ export default function NotesPage() {
   return (
     <div className="px-4 py-6 md:p-8 max-w-3xl pt-14">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">食物笔记</h1>
-        <p className="text-xs text-gray-400 mt-1">聊过的食物会在这里慢慢长成一篇你自己的笔记。</p>
+        <h1 className="text-[22px] font-bold text-ink">食物笔记</h1>
+        <p className="text-[11px] text-ink-muted mt-1">聊过的食物会在这里慢慢长成一篇你自己的笔记。</p>
       </div>
       <Suspense fallback={<ListSkeleton />}>
         <NotesLoader />

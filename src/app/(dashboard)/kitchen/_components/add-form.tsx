@@ -7,9 +7,9 @@ import { addIngredient, type AddIngredientState } from "../actions";
 import { CATEGORIES } from "./constants";
 
 const inputClass =
-  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 md:py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none focus:ring-0 transition-colors";
+  "w-full rounded-xl border border-pebble bg-pebble/30 px-3 py-2.5 md:py-2 text-base md:text-sm text-ink placeholder-ink-muted focus:border-ink/30 focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ink/20 transition-colors";
 
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+const labelClass = "block text-[11px] font-medium text-ink-soft mb-1";
 
 const initialState: AddIngredientState = { status: "idle" };
 
@@ -36,7 +36,7 @@ export function AddIngredientForm({ onBack }: Props) {
   return (
     <form ref={formRef} action={action} className="space-y-5">
       {message && (
-        <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+        <p className="text-[11px] text-danger bg-danger/10 px-3 py-2 rounded-lg">
           {message}
         </p>
       )}
@@ -53,7 +53,7 @@ export function AddIngredientForm({ onBack }: Props) {
           className={inputClass}
         />
         {fieldErrors?.name && (
-          <p className="mt-1 text-xs text-red-500">{fieldErrors.name[0]}</p>
+          <p className="mt-1 text-[11px] text-danger">{fieldErrors.name[0]}</p>
         )}
       </div>
 
@@ -67,7 +67,7 @@ export function AddIngredientForm({ onBack }: Props) {
           ))}
         </select>
         {fieldErrors?.category && (
-          <p className="mt-1 text-xs text-red-500">{fieldErrors.category[0]}</p>
+          <p className="mt-1 text-[11px] text-danger">{fieldErrors.category[0]}</p>
         )}
       </div>
 
@@ -113,7 +113,7 @@ export function AddIngredientForm({ onBack }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="flex-1 rounded-lg bg-gray-900 px-4 py-3 md:py-2 text-sm font-medium text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 transition-colors"
+          className="flex-1 rounded-full bg-ink px-4 py-3 md:py-2 text-[13px] font-medium text-white hover:bg-ink/90 active:bg-ink/80 disabled:opacity-50 transition-colors"
         >
           {pending ? "保存中…" : "保存食材"}
         </button>
@@ -121,7 +121,7 @@ export function AddIngredientForm({ onBack }: Props) {
           <button
             type="button"
             onClick={onBack}
-            className="rounded-lg border border-gray-200 px-4 py-3 md:py-2 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="rounded-full border border-pebble/60 bg-white/70 px-4 py-3 md:py-2 text-[13px] text-ink-soft hover:border-ink/30 hover:bg-surface-dim active:bg-pebble/60 transition-colors"
           >
             返回选择
           </button>
@@ -130,9 +130,9 @@ export function AddIngredientForm({ onBack }: Props) {
 
       {/* Saved counter */}
       {savedCount > 0 && (
-        <p className="text-center text-sm text-gray-400 pt-1">
+        <p className="text-center text-[11px] text-ink-muted pt-1">
           已添加 {savedCount} 个 ·{" "}
-          <Link href="/kitchen" className="text-gray-900 underline underline-offset-2">
+          <Link href="/kitchen" className="text-ink underline underline-offset-2">
             查看食材库
           </Link>
         </p>

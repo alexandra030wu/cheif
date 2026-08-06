@@ -11,24 +11,31 @@ export function DeleteRecipeButton({ id }: { id: string }) {
       type="button"
       disabled={pending}
       onClick={() => startTransition(() => deleteSavedRecipe(id))}
-      className="shrink-0 rounded-lg p-2 -m-1 text-gray-300 hover:text-red-400 active:text-red-500 disabled:opacity-40 transition-colors"
+      className="shrink-0 rounded-lg p-2 -m-1 text-ink-muted hover:text-danger active:text-danger disabled:opacity-40 transition-colors"
       title="删除"
       suppressHydrationWarning
     >
       <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 20 20"
-        fill="currentColor"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         className={`w-4 h-4 ${pending ? "animate-spin" : ""}`}
         suppressHydrationWarning
       >
         {pending ? (
           <>
-            <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" fill="none" className="opacity-25" />
-            <path d="M2 10a8 8 0 018-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" className="opacity-75" />
+            <circle cx="12" cy="12" r="9" className="opacity-25" />
+            <path d="M12 3a9 9 0 0 1 9 9" className="opacity-75" />
           </>
         ) : (
-          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+          <>
+            <path d="M3 6h18" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </>
         )}
       </svg>
     </button>

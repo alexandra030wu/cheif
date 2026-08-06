@@ -48,7 +48,7 @@ const modes: {
 export function ModeSelector({ onSelect }: Props) {
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4">选择添加方式</p>
+      <p className="text-[12px] text-ink-soft mb-4">选择添加方式</p>
       <div className="grid grid-cols-2 gap-3">
         {modes.map((mode) => (
           <button
@@ -58,20 +58,20 @@ export function ModeSelector({ onSelect }: Props) {
             onClick={() => mode.enabled && onSelect(mode.id)}
             className={`relative rounded-xl border p-4 text-left transition-colors ${
               mode.enabled
-                ? "border-gray-200 bg-white hover:border-gray-300 active:bg-gray-50 cursor-pointer"
-                : "border-gray-100 bg-gray-50/50 cursor-not-allowed opacity-60"
+                ? "border-pebble/60 bg-surface hover:border-ink/30 active:bg-surface-dim cursor-pointer"
+                : "border-pebble/40 bg-surface-dim/50 cursor-not-allowed opacity-60"
             }`}
           >
             {/* Badge */}
             {mode.badge && (
-              <span className="absolute top-2 right-2 rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
+              <span className="absolute top-2 right-2 rounded-full bg-butter text-ink-soft px-1.5 py-0.5 text-[10px] font-medium">
                 {mode.badge}
               </span>
             )}
 
             <span className="text-2xl block mb-2">{mode.icon}</span>
-            <p className="text-sm font-medium text-gray-900 mb-0.5">{mode.label}</p>
-            <p className="text-xs text-gray-400 leading-snug">
+            <p className="text-[13px] font-semibold text-ink mb-0.5">{mode.label}</p>
+            <p className="text-[11px] text-ink-muted leading-snug">
               {mode.enabled ? mode.desc : "即将推出"}
             </p>
           </button>

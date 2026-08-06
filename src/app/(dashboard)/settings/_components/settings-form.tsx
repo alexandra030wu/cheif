@@ -29,7 +29,31 @@ const MODEL_OPTIONS: Array<{ value: "claude" | "deepseek"; label: string; desc: 
   { value: "deepseek", label: "DeepSeek V4", desc: "国产模型，速度快、更省" },
 ];
 
-const sectionTitle = "text-sm font-semibold text-gray-900 mb-3";
+/* ── 表单原语(shadcn 的 Card / FormItem 结构语法,视觉走 DanOS)──
+ * FormSection = 一张白卡片,内含标题 + 可选描述 + 控件区
+ * 统一的 label/description/control 三层节奏,取代此前散装的 h2 + div */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl bg-surface shadow-soft p-5">
+      <h2 className="text-[13px] font-semibold text-ink">{title}</h2>
+      {description && (
+        <p className="text-[11px] text-ink-muted mt-1 leading-relaxed">{description}</p>
+      )}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+const inputClass =
+  "w-full rounded-xl border border-pebble/70 bg-pebble/25 px-3 py-2.5 text-[12.5px] text-ink placeholder-ink-muted focus:border-ink/20 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-ink/10 transition";
 
 interface Props {
   initial: ProfileData;
@@ -95,10 +119,9 @@ export function SettingsForm({ initial }: Props) {
   }
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-4">
       {/* Avatar + Nickname */}
-      <section>
-        <h2 className={sectionTitle}>头像和昵称</h2>
+      <FormSection title="头像和昵称">
         <div className="flex items-center gap-4 mb-3">
           <span className="text-4xl">{avatar}</span>
           <input
@@ -106,7 +129,7 @@ export function SettingsForm({ initial }: Props) {
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="输入昵称"
-            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors"
+            className={`flex-1 ${inputClass}`}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -117,50 +140,48 @@ export function SettingsForm({ initial }: Props) {
               onClick={() => setAvatar(e)}
               className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors ${
                 avatar === e
-                  ? "bg-gray-900 ring-2 ring-gray-900 ring-offset-2"
-                  : "bg-gray-100 hover:bg-gray-200 active:bg-gray-300"
+                  ? "bg-ink ring-2 ring-ink ring-offset-2 ring-offset-canvas"
+                  : "bg-surface-dim hover:bg-pebble/60 active:bg-pebble"
               }`}
             >
               {e}
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Default Servings */}
-      <section>
-        <h2 className={sectionTitle}>几人份？</h2>
+      <FormSection title="几人份？" description="默认按这个份量给菜谱配料">
         <div className="grid grid-cols-2 gap-2">
           {SERVINGS_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
               onClick={() => setServings(opt.value)}
-              className={`rounded-xl py-3 text-sm font-medium transition-colors ${
+              className={`rounded-xl py-3 text-[12.5px] font-medium transition-colors ${
                 servings === opt.value
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300"
+                  ? "bg-ink text-white"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60 active:bg-pebble"
               }`}
             >
               {opt.label}
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Dietary Preferences */}
-      <section>
-        <h2 className={sectionTitle}>饮食偏好</h2>
+      <FormSection title="饮食偏好" description="AI 推荐菜谱时会优先照顾这些偏好">
         <div className="flex flex-wrap gap-2">
           {DIETARY_OPTIONS.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setDietary(toggleInArray(dietary, item))}
-              className={`rounded-full px-4 py-2 text-sm transition-colors ${
+              className={`rounded-full px-4 py-2 text-[12px] transition-colors ${
                 dietary.includes(item)
-                  ? "bg-green-100 text-green-800 font-medium"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-ink text-white font-medium"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
               }`}
             >
               {dietary.includes(item) ? "✓ " : ""}
@@ -168,31 +189,30 @@ export function SettingsForm({ initial }: Props) {
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Fat Loss Mode */}
-      <section>
-        <h2 className={sectionTitle}>减脂模式</h2>
+      <FormSection title="减脂模式">
         <button
           type="button"
           onClick={() => setFatLossMode(!fatLossMode)}
           className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
-            fatLossMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            fatLossMode ? "bg-ink text-white" : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
           }`}
         >
           <div>
-            <span className="text-sm font-medium">{fatLossMode ? "🔥 减脂模式已开启" : "减脂模式"}</span>
-            <p className={`text-xs mt-0.5 ${fatLossMode ? "text-gray-300" : "text-gray-400"}`}>
+            <span className="text-[12.5px] font-medium">{fatLossMode ? "🔥 减脂模式已开启" : "减脂模式"}</span>
+            <p className={`text-[11px] mt-0.5 ${fatLossMode ? "text-white/70" : "text-ink-muted"}`}>
               高蛋白、控油，每餐约 500–600 kcal，菜谱附营养估算
             </p>
           </div>
           <span
             className={`shrink-0 w-10 h-6 rounded-full relative transition-colors ${
-              fatLossMode ? "bg-green-500" : "bg-gray-300"
+              fatLossMode ? "bg-white/25" : "bg-pebble"
             }`}
           >
             <span
-              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-soft transition-all ${
                 fatLossMode ? "left-[18px]" : "left-0.5"
               }`}
             />
@@ -200,8 +220,8 @@ export function SettingsForm({ initial }: Props) {
         </button>
         {fatLossMode && (
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <label className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-              <span className="block text-xs text-gray-400 mb-1">每日热量目标 (kcal)</span>
+            <label className="rounded-xl bg-pebble/25 border border-pebble/70 px-3 py-2.5">
+              <span className="block text-[11px] text-ink-muted mb-1">每日热量目标 (kcal) · 控制在此上限内</span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -209,11 +229,11 @@ export function SettingsForm({ initial }: Props) {
                 value={calorieTarget}
                 onChange={(e) => setCalorieTarget(e.target.value)}
                 placeholder="如 1650"
-                className="w-full bg-transparent text-base text-gray-900 placeholder-gray-300 focus:outline-none"
+                className="w-full bg-transparent text-[12.5px] text-ink placeholder-ink-muted focus:outline-none"
               />
             </label>
-            <label className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-              <span className="block text-xs text-gray-400 mb-1">每日蛋白质目标 (g)</span>
+            <label className="rounded-xl bg-pebble/25 border border-pebble/70 px-3 py-2.5">
+              <span className="block text-[11px] text-ink-muted mb-1">每日蛋白质目标 (g) · 菜谱会朝这个量凑</span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -221,27 +241,25 @@ export function SettingsForm({ initial }: Props) {
                 value={proteinTarget}
                 onChange={(e) => setProteinTarget(e.target.value)}
                 placeholder="如 120"
-                className="w-full bg-transparent text-base text-gray-900 placeholder-gray-300 focus:outline-none"
+                className="w-full bg-transparent text-[12.5px] text-ink placeholder-ink-muted focus:outline-none"
               />
             </label>
           </div>
         )}
-      </section>
+      </FormSection>
 
       {/* Allergies */}
-      <section>
-        <h2 className={sectionTitle}>过敏原</h2>
-        <p className="text-xs text-gray-400 mb-2">选中后 AI 会自动避开这些食材</p>
+      <FormSection title="过敏原">
         <div className="flex flex-wrap gap-2">
           {ALLERGY_OPTIONS.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setAllergies(toggleInArray(allergies, item))}
-              className={`rounded-full px-4 py-2 text-sm transition-colors ${
+              className={`rounded-full px-4 py-2 text-[12px] transition-colors ${
                 allergies.includes(item)
-                  ? "bg-red-100 text-red-800 font-medium"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-ink text-white font-medium"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
               }`}
             >
               {allergies.includes(item) ? "✗ " : ""}
@@ -249,11 +267,10 @@ export function SettingsForm({ initial }: Props) {
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Cooking Level */}
-      <section>
-        <h2 className={sectionTitle}>厨艺水平</h2>
+      <FormSection title="厨艺水平">
         <div className="space-y-2">
           {COOKING_LEVELS.map((opt) => (
             <button
@@ -262,32 +279,31 @@ export function SettingsForm({ initial }: Props) {
               onClick={() => setLevel(opt.value)}
               className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
                 level === opt.value
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-ink text-white"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
               }`}
             >
-              <span className="text-sm font-medium">{opt.label}</span>
-              <span className={`text-xs ${level === opt.value ? "text-gray-300" : "text-gray-400"}`}>
+              <span className="text-[12.5px] font-medium">{opt.label}</span>
+              <span className={`text-[11px] ${level === opt.value ? "text-white/70" : "text-ink-muted"}`}>
                 {opt.desc}
               </span>
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Kitchen Equipment */}
-      <section>
-        <h2 className={sectionTitle}>常用厨具</h2>
+      <FormSection title="常用厨具">
         <div className="flex flex-wrap gap-2">
           {EQUIPMENT_OPTIONS.map((item) => (
             <button
               key={item}
               type="button"
               onClick={() => setEquipment(toggleInArray(equipment, item))}
-              className={`rounded-full px-4 py-2 text-sm transition-colors ${
+              className={`rounded-full px-4 py-2 text-[12px] transition-colors ${
                 equipment.includes(item)
-                  ? "bg-blue-100 text-blue-800 font-medium"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-ink text-white font-medium"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
               }`}
             >
               {equipment.includes(item) ? "✓ " : ""}
@@ -295,12 +311,10 @@ export function SettingsForm({ initial }: Props) {
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* AI Model */}
-      <section>
-        <h2 className={sectionTitle}>AI 模型</h2>
-        <p className="text-xs text-gray-400 mb-3">选择驱动聊天和菜谱的大模型。不确定就用默认的 Claude。</p>
+      <FormSection title="AI 模型">
         <div className="space-y-2">
           {MODEL_OPTIONS.map((opt) => (
             <button
@@ -309,31 +323,31 @@ export function SettingsForm({ initial }: Props) {
               onClick={() => setAiModel(opt.value)}
               className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition-colors ${
                 aiModel === opt.value
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-ink text-white"
+                  : "bg-surface-dim text-ink-soft hover:bg-pebble/60"
               }`}
             >
-              <span className="text-sm font-medium">{opt.label}</span>
-              <span className={`text-xs ${aiModel === opt.value ? "text-gray-300" : "text-gray-400"}`}>
+              <span className="text-[12.5px] font-medium">{opt.label}</span>
+              <span className={`text-[11px] ${aiModel === opt.value ? "text-white/70" : "text-ink-muted"}`}>
                 {opt.desc}
               </span>
             </button>
           ))}
         </div>
-      </section>
+      </FormSection>
 
       {/* Save */}
       {error && (
-        <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+        <p className="text-[12px] text-danger bg-danger/10 px-3 py-2 rounded-xl">{error}</p>
       )}
       <button
         type="button"
         onClick={handleSave}
         disabled={saving}
-        className={`w-full rounded-xl py-3.5 text-sm font-medium transition-colors ${
+        className={`w-full rounded-full py-3.5 text-[13px] font-medium transition-colors ${
           saved
-            ? "bg-green-50 text-green-700 border border-green-200"
-            : "bg-gray-900 text-white hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50"
+            ? "bg-ok/10 text-ok border border-ok/20"
+            : "bg-ink text-white hover:bg-ink/90 active:bg-ink/80 disabled:opacity-50"
         }`}
       >
         {saved ? "已保存" : saving ? "保存中..." : "保存设置"}

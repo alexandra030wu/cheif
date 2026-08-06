@@ -251,53 +251,54 @@ export function VoiceInput({ onBack }: Props) {
         <button
           type="button"
           onClick={onBack}
-          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-[11px] text-ink-muted hover:text-ink-soft transition-colors"
         >
           ← 返回选择
         </button>
-        <h2 className="text-base font-semibold text-gray-900">语音添加</h2>
+        <h2 className="text-[15px] font-semibold text-ink">语音添加</h2>
         <div className="w-16" />
       </div>
 
       {error && (
-        <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg mb-3">{error}</p>
+        <p className="text-[12px] text-danger bg-danger/10 px-3 py-2 rounded-lg mb-3">{error}</p>
       )}
 
       {/* Mic status area */}
-      <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 mb-4">
+      <div className="flex items-center gap-3 rounded-xl border border-pebble/60 bg-surface-dim/50 px-4 py-3 mb-4">
         {/* Mic button */}
         <button
           type="button"
           onClick={toggleMic}
           className={`shrink-0 flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
             micStatus === "recording"
-              ? "bg-red-100 text-red-600 animate-pulse"
-              : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+              ? "bg-ink text-white animate-pulse"
+              : "bg-pebble text-ink-muted hover:bg-pebble/70"
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-            <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
-            <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.08A7 7 0 0 0 19 11Z" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" x2="12" y1="19" y2="22" />
           </svg>
         </button>
 
         {/* Status + transcript */}
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-gray-400 mb-0.5">
+          <p className="text-[11px] text-ink-muted mb-0.5">
             {micStatus === "recording"
               ? "正在听..."
               : micStatus === "idle"
                 ? "点击麦克风开始"
                 : "处理中..."}
           </p>
-          <p className="text-sm text-gray-700 truncate">
+          <p className="text-[12.5px] text-ink-soft truncate">
             {transcript || "说出你的食材，如「鸡蛋三个、牛奶一盒」"}
           </p>
         </div>
 
         {/* Pending indicator */}
         {pendingCount > 0 && (
-          <span className="shrink-0 text-xs text-blue-500 bg-blue-50 rounded-full px-2 py-0.5">
+          <span className="shrink-0 text-[11px] text-ink-muted bg-pebble/50 rounded-full px-2 py-0.5">
             {pendingCount}
           </span>
         )}
@@ -321,10 +322,10 @@ export function VoiceInput({ onBack }: Props) {
       {items.length === 0 && savedCount === 0 && !error && (
         <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
           <p className="text-4xl mb-3">🎤</p>
-          <p className="text-sm text-gray-500 mb-1">
+          <p className="text-[12px] text-ink-soft mb-1">
             {micStatus === "recording" ? "正在录音，说出你的食材..." : "点击麦克风开始语音添加"}
           </p>
-          <p className="text-xs text-gray-400">
+          <p className="text-[11px] text-ink-muted">
             例如："鸡蛋三个、牛奶一盒、西兰花两颗"
           </p>
         </div>

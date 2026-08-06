@@ -12,17 +12,17 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_STYLES: Record<string, string> = {
-  easy: "bg-green-50 text-green-700",
-  medium: "bg-amber-50 text-amber-700",
-  hard: "bg-red-50 text-red-700",
+  easy: "bg-ok/10 text-ok",
+  medium: "bg-warn/10 text-warn",
+  hard: "bg-danger/10 text-danger",
 };
 
 const GRADIENT_FALLBACKS = [
-  "from-amber-100 to-orange-100",
-  "from-green-100 to-emerald-100",
-  "from-blue-100 to-cyan-100",
-  "from-purple-100 to-pink-100",
-  "from-rose-100 to-red-100",
+  "from-mint to-sky",
+  "from-blush to-peach",
+  "from-butter to-peach",
+  "from-lilac to-sky",
+  "from-peach to-butter",
 ];
 
 const TIME_PRESETS = [
@@ -120,16 +120,16 @@ export function SavedRecipeList({ items }: Props) {
       {/* Search */}
       <div className="relative mt-3 mb-3">
         <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted pointer-events-none"
         >
-          <path
-            fillRule="evenodd"
-            d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-            clipRule="evenodd"
-          />
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
         </svg>
         <input
           type="search"
@@ -141,16 +141,17 @@ export function SavedRecipeList({ items }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索食谱..."
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-8 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-400 focus:outline-none transition-colors"
+          className="w-full rounded-xl border border-pebble bg-pebble/30 pl-9 pr-8 py-2.5 text-[12.5px] text-ink placeholder-ink-muted focus:border-ink/30 focus:bg-surface focus:outline-none focus:ring-1 focus:ring-ink/20 transition-colors"
         />
         {search && (
           <button
             type="button"
             onClick={() => setSearch("")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-ink-muted hover:text-ink-soft"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M18 6 6 18M6 6l12 12" />
             </svg>
           </button>
         )}
@@ -183,7 +184,7 @@ export function SavedRecipeList({ items }: Props) {
             />
           ))}
           {options.difficulties.length > 0 && TIME_PRESETS.length > 0 && (
-            <div className="w-px bg-gray-200 shrink-0 my-1" />
+            <div className="w-px bg-pebble shrink-0 my-1" />
           )}
           {TIME_PRESETS.map((tp) => (
             <Chip
@@ -211,7 +212,7 @@ export function SavedRecipeList({ items }: Props) {
       </div>
 
       {/* Result count */}
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-[11px] text-ink-muted mb-4">
         {hasAnyFilter
           ? `找到 ${filtered.length} 道食谱`
           : `共 ${items.length} 道收藏菜谱`}
@@ -238,7 +239,7 @@ export function SavedRecipeList({ items }: Props) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setSelected(item.recipe);
                 }}
-                className="rounded-xl border border-gray-100 bg-white overflow-hidden hover:border-gray-200 active:bg-gray-50 transition-colors cursor-pointer flex flex-row"
+                className="rounded-3xl bg-surface ring-1 ring-black/5 shadow-soft overflow-hidden hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 ease-spring cursor-pointer flex flex-row"
               >
                 {/* Cover thumbnail */}
                 <div className="w-24 md:w-32 shrink-0">
@@ -252,7 +253,7 @@ export function SavedRecipeList({ items }: Props) {
                     <div
                       className={`w-full h-full bg-gradient-to-br ${GRADIENT_FALLBACKS[gradientIdx]} flex items-center justify-center min-h-[80px]`}
                     >
-                      <span className="text-2xl opacity-50">🍳</span>
+                      <span className="text-2xl opacity-80">🍳</span>
                     </div>
                   )}
                 </div>
@@ -260,7 +261,7 @@ export function SavedRecipeList({ items }: Props) {
                 {/* Info */}
                 <div className="flex-1 p-3 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="text-sm font-semibold text-gray-900 leading-snug truncate">
+                    <h3 className="text-[13px] font-semibold text-ink leading-snug truncate">
                       {item.title}
                     </h3>
                     <div
@@ -269,7 +270,7 @@ export function SavedRecipeList({ items }: Props) {
                     >
                       {item.difficulty && (
                         <span
-                          className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${
+                          className={`rounded-full px-1.5 py-0.5 text-[10.5px] font-medium ${
                             DIFFICULTY_STYLES[item.difficulty] ?? DIFFICULTY_STYLES.easy
                           }`}
                         >
@@ -281,16 +282,18 @@ export function SavedRecipeList({ items }: Props) {
                   </div>
 
                   {item.description && (
-                    <p className="text-xs text-gray-400 mb-1.5 line-clamp-1">
+                    <p className="text-[11px] text-ink-muted mb-1.5 line-clamp-1">
                       {item.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 text-[11px] text-ink-muted">
                     {item.totalMinutes > 0 && (
                       <span className="inline-flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z" clipRule="evenodd" />
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                          strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 2" />
                         </svg>
                         {item.totalMinutes} 分钟
                       </span>
@@ -309,9 +312,9 @@ export function SavedRecipeList({ items }: Props) {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-ink-muted">
           <p className="text-3xl mb-2">🔍</p>
-          <p className="text-sm mb-2">没找到相关食谱</p>
+          <p className="text-[12px] mb-2">没找到相关食谱</p>
           {hasAnyFilter && (
             <button
               type="button"
@@ -322,7 +325,7 @@ export function SavedRecipeList({ items }: Props) {
                 setMaxMinutes(null);
                 setSelectedTags([]);
               }}
-              className="text-sm text-gray-900 underline underline-offset-2"
+              className="text-[12px] text-ink underline underline-offset-2"
             >
               清除所有筛选
             </button>
@@ -354,10 +357,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+      className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
         active
-          ? "bg-gray-900 text-white"
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+          ? "bg-ink text-white"
+          : "bg-surface-dim text-ink-soft hover:bg-pebble active:bg-pebble"
       }`}
     >
       {label}
