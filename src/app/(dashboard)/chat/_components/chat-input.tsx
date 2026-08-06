@@ -67,10 +67,13 @@ export const ChatInput = memo(function ChatInput({
     // 过渡分两层:上缘毛玻璃渐变(规格与顶栏一致)遮住滑过的历史消息;
     // 输入框下沿到窗口底边为纯实色,不透任何文字。
     <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+      {/* 过渡层收窄到输入列同宽(max-w-2xl),不横穿全窗 —
+          免得盖住窗口右缘的滚动条;消息列同宽,列外本来就没有文字 */}
+      <div className="relative mx-auto max-w-2xl">
       <div className="absolute inset-x-0 -top-7 bottom-0 backdrop-blur-md bg-canvas/70 [mask-image:linear-gradient(to_top,black_55%,transparent)]" />
       <div className="absolute inset-x-0 bottom-0 h-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-canvas" />
-      <div className="relative px-3 pb-3">
-      <div className="mx-auto max-w-2xl pointer-events-auto">
+      <div className="relative px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+      <div className="pointer-events-auto">
         <div className="flex items-end gap-1 rounded-[22px] bg-surface ring-1 ring-black/5 shadow-soft px-2 py-1.5 focus-within:ring-ink/15 transition-shadow">
         {accessory && <div className="shrink-0 mb-1 ml-1">{accessory}</div>}
         <textarea
@@ -106,7 +109,7 @@ export const ChatInput = memo(function ChatInput({
         </div>
       </div>
       </div>
-      <div className="relative h-[env(safe-area-inset-bottom)]" />
+      </div>
     </div>
   );
 });
