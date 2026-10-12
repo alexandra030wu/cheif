@@ -3,6 +3,7 @@
 import { memo } from "react";
 import type { Recipe } from "@/lib/ai-service";
 import type { ChatMessage } from "@/stores/chat-store";
+import { ChatMarkdown } from "./chat-markdown";
 import { RecipeCard } from "./recipe-card";
 
 export type { ChatMessage };
@@ -38,7 +39,7 @@ export const MessageBubble = memo(function MessageBubble({
     <div className="px-4 space-y-3">
       {hasContent && (
         <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 text-sm text-ink">
-          {message.content}
+          <ChatMarkdown content={message.content} />
         </div>
       )}
       {hasRecipes && (
