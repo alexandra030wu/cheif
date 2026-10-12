@@ -55,6 +55,11 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// public/ 下的静态文件(sw.js、manifest.json、图标)也要排除:之前它们未登录时被
+// 307 到 /login,service worker 注册永远失败(被 sw-register 的空 catch 吞掉),
+// PWA manifest 和 apple-touch-icon 也拿到的是登录页 HTML。
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|images/|sw\\.js|manifest\\.json|.*\\.(?:png|svg|ico|jpg|jpeg|webp)$).*)",
+  ],
 };
