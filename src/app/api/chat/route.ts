@@ -1,5 +1,9 @@
 import { generateObject, streamText } from "ai";
-import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import {
+  createLanguageModelProvider,
+  createSearchModelProvider,
+  resolveProviderConfig,
+} from "@/lib/ai-service/registry";
 import {
   ChatResponseSchema,
   normalizeImportedRecipe,
@@ -18,7 +22,9 @@ import { getOrCreateSharedCover } from "@/lib/icon-generation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserProviderId } from "@/lib/ai-service/user-provider";
 
-export const maxDuration = 60;
+// 「同款」联网:Claude 搜 2 次实测 35s,60s 太紧。Vercel Fluid compute
+// (默认开启)下 Hobby 上限 300s,这里留到 120s
+export const maxDuration = 120;
 
 // ── Intent classification ──────────────────────────────────────
 // V2 「饮食陪伴」基调：对话为主，菜谱推荐只在用户**明确**要求时出现。
@@ -31,8 +37,13 @@ const RECIPE_KEYWORDS =
 // 疑问句句尾或求建议的句式：用户在问问题 / 想了解，不是要菜谱
 const QUESTION_SUFFIX = /[?？]$|吗[?？！。\s]*$|呢[?？！。\s]*$/;
 
+// 「XX 同款」/复刻店里的饮品或菜:走 chat + 联网查原版配方。优先于 recipe
+// 关键词(「推荐个喜茶同款」也该先查原版,而不是凭空生成三道菜)。
+const COPYCAT_SIGNAL = /同款|复刻|平替/;
+
 function classifyIntent(message: string): "recipe" | "chat" {
   const trimmed = message.trim();
+  if (COPYCAT_SIGNAL.test(trimmed)) return "chat";
   if (QUESTION_SUFFIX.test(trimmed)) return "chat";
   if (RECIPE_KEYWORDS.test(trimmed)) return "recipe";
   return "chat";
@@ -118,13 +129,19 @@ export async function POST(request: Request) {
   const providerId = await getUserProviderId(supabase, user?.id);
   const config = resolveProviderConfig({ id: providerId });
   const model = createLanguageModelProvider(config);
+  const copycat = COPYCAT_SIGNAL.test(input.message);
+  const searchModel = copycat ? createSearchModelProvider(config) : null;
+  // 用量和日志记实际回答这一轮的模型(DeepSeek 联网走的是 deepseek-flash)
+  const replyModelId = searchModel?.modelId ?? config.model;
 
   const logCtx = {
     requestId,
     userId: user?.id ?? null,
     intent,
+    copycat,
+    webSearch: !!searchModel,
     provider: config.id,
-    model: config.model,
+    model: replyModelId,
     msgLen: input.message.length,
     historyLen: input.history?.length ?? 0,
     ingredientsLen: input.ingredients.length,
@@ -243,14 +260,19 @@ export async function POST(request: Request) {
       try {
         if (intent === "chat") {
           // ── Chat intent: stream text only ──
-          const { system, messages } = buildChatReplyPrompt(input);
+          const { system, messages } = buildChatReplyPrompt(
+            input,
+            copycat ? { copycat: { canSearch: !!searchModel } } : undefined
+          );
+          // 同款:要讲清原版用料 + 在家版,512 token 只够一句话
           const result = streamText({
-            model,
+            model: searchModel?.model ?? model,
             system,
             messages,
             temperature: 0.7,
-            maxOutputTokens: 512,
+            maxOutputTokens: copycat ? 2048 : 512,
             providerOptions,
+            ...(searchModel ? { tools: searchModel.tools } : {}),
           });
 
           for await (const chunk of result.textStream) {
@@ -383,7 +405,7 @@ export async function POST(request: Request) {
           request_id: requestId,
           intent,
           provider: config.id,
-          model: config.model,
+          model: replyModelId,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           cover_count: coverCount,

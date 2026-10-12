@@ -1,6 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDeepSeek } from "@ai-sdk/deepseek";
+import type { ToolSet } from "ai";
 import type { AIProviderConfig, AIProviderID } from "./types";
 
 function buildProxiedFetch() {
@@ -70,6 +71,42 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
     default:
       throw new Error(`Unknown AI provider: ${config.id}`);
   }
+}
+
+// DeepSeek 的 OpenAI 协议接口没有联网搜索;它的 Anthropic 兼容接口原生支持
+// web_search_20250305(DanShots v0.33 实测,2026-10-12 在蛋厨复测:伯牙绝弦
+// 搜 2 次、约 11s)。只有这个接口上的 deepseek-flash 实测过,所以写死。
+const DEEPSEEK_ANTHROPIC_BASE_URL = "https://api.deepseek.com/anthropic/v1";
+const DEEPSEEK_SEARCH_MODEL = "deepseek-flash";
+
+/**
+ * 带联网搜索的模型(用于「XX 同款」这类要查原版配方的问题)。
+ * Claude 直接用自家 web_search;DeepSeek 改走它的 Anthropic 兼容接口;
+ * 其他 provider 不支持,返回 null,调用方退回不联网的普通模型。
+ */
+export function createSearchModelProvider(config: AIProviderConfig) {
+  const baseURL =
+    config.id === "anthropic"
+      ? "https://api.anthropic.com/v1"
+      : config.id === "deepseek"
+        ? DEEPSEEK_ANTHROPIC_BASE_URL
+        : null;
+  if (!baseURL) return null;
+  const modelId = config.id === "deepseek" ? DEEPSEEK_SEARCH_MODEL : config.model;
+  const anthropic = createAnthropic({
+    apiKey: config.apiKey,
+    baseURL,
+    fetch: buildProxiedFetch(),
+  });
+  return {
+    model: anthropic(modelId),
+    modelId,
+    // @ai-sdk/anthropic 带的 provider-utils(4.0.26)比 ai 的(4.0.21)新,
+    // Tool 类型的 schema 符号对不上,只是类型层面的;运行时已实测可用
+    tools: {
+      web_search: anthropic.tools.webSearch_20250305({ maxUses: 3 }),
+    } as unknown as ToolSet,
+  };
 }
 
 // User-facing model choices (stored in profiles.ai_model_preference). Maps to

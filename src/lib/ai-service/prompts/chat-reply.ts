@@ -17,7 +17,24 @@ export interface PromptMessage {
  * emotional support). Includes the recent multi-turn `history` so the model
  * actually remembers what was said earlier in the session.
  */
-export function buildChatReplyPrompt(input: ChatRecipeInput): {
+// 「XX 同款」:用户要复刻店里的饮品/菜。2-4 句的闲聊长度会把原版配方压成
+// 一句「茉莉绿茶+牛乳」(2026-10-12 伯牙绝弦对比豆包),所以这类问题换一套规则。
+const COPYCAT_RULES = (canSearch: boolean) => `## 本轮：复刻「同款」
+用户想在家复刻某家店/品牌的饮品或菜。
+- 先说**原版用料**：${
+  canSearch
+    ? "先用联网搜索查清原版配方（优先品牌官方公示、权威报道），说明信息来源"
+    : "你现在不能联网，只凭记忆回答；不确定的成分明确说「不确定」，不要编"
+}
+- 再给**在家版**：每种在家买不到的原料写清用什么替代、为什么（如「淡奶油 → 替代基底乳，负责丝滑」）
+- 不要把原版悄悄简化成家常版；用料、用量、关键步骤和避坑点都要有
+- 可以用小标题和列表，篇幅以讲清楚为准，不受 2-4 句限制
+- 不要输出 JSON；不要写「我先搜索一下」这类过程话`;
+
+export function buildChatReplyPrompt(
+  input: ChatRecipeInput,
+  opts?: { copycat?: { canSearch: boolean } }
+): {
   system: string;
   messages: PromptMessage[];
 } {
@@ -26,7 +43,7 @@ export function buildChatReplyPrompt(input: ChatRecipeInput): {
   const cookingLevel = prefs?.cooking_level || "intermediate";
   const levelLabel = LEVEL_LABELS[cookingLevel] ?? "进阶";
 
-  const system = `你是蛋厨（dan.chef）—— 一个温暖、有个性的智能烹饪助手。
+  const base = `你是蛋厨（dan.chef）—— 一个温暖、有个性的智能烹饪助手。
 
 ## 你的性格
 - 像一个热心但不啰嗦的朋友，说话自然、有趣，偶尔调皮
@@ -47,6 +64,10 @@ ${buildTasteBlock(input.tasteProfile, nickname)}
 - 如果用户想要菜谱推荐，引导他们说出具体想法（"想吃什么类型的？"）
 - 不要输出 JSON 或结构化数据，只用自然语言回复
 - **你能读到上方的多轮对话历史，请把它当成真实的连续聊天，不要装作不记得之前说过的话**`;
+
+  const system = opts?.copycat
+    ? `${base}\n\n${COPYCAT_RULES(opts.copycat.canSearch)}`
+    : base;
 
   const messages: PromptMessage[] = [
     ...(input.history ?? []),
