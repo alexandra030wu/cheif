@@ -376,10 +376,17 @@ export async function POST(request: Request) {
         }
       } catch (err) {
         logErr("stream", err);
+        // 402 = 账户没钱了。SDK 原文是 "Payment Required",用户看不出该去充值
+        const status = (err as { statusCode?: number } | null)?.statusCode;
         sseSend(controller, {
           type: "error",
           requestId,
-          message: err instanceof Error ? err.message : "AI 服务调用失败",
+          message:
+            status === 402
+              ? `AI 服务余额不足(${config.id === "deepseek" ? "DeepSeek" : config.id} 返回 402),充值后再试`
+              : err instanceof Error
+                ? err.message
+                : "AI 服务调用失败",
         });
       }
 
