@@ -5,7 +5,8 @@ import {
   resolveProviderConfig,
 } from "@/lib/ai-service/registry";
 import {
-  ChatResponseSchema,
+  LenientChatResponseSchema,
+  normalizeChatRecipe,
   normalizeImportedRecipe,
   type Recipe,
 } from "@/lib/ai-service/types";
@@ -48,6 +49,9 @@ function classifyIntent(message: string): "recipe" | "chat" {
   if (RECIPE_KEYWORDS.test(trimmed)) return "recipe";
   return "chat";
 }
+
+// 回复说到一半出错时补在文字后面(落库的版本和前端即时显示一致)
+const FAILED_NOTE = "(话没说完就出错了,再发一次试试)";
 
 // ── SSE helpers ────────────────────────────────────────────────
 
@@ -232,6 +236,7 @@ export async function POST(request: Request) {
       let fullText = "";
       let finalRecipes: Recipe[] | null = null;
       let assistantMsgId: string | null = null;
+      let streamFailed = false;
 
       // 为 recipes 并行生成封面:每张完成即推一个 cover 事件,返回带
       // coverImageUrl 的新数组。chat 定稿路径和 recipe 推荐路径共用。
@@ -331,7 +336,8 @@ export async function POST(request: Request) {
             system: chatSystem + "\n\n注意：用户想要菜谱推荐，请简短回复1-2句话表示你在为他准备菜谱，不要给出具体菜谱内容。",
             messages: chatMessages,
             temperature: 0.7,
-            maxOutputTokens: 150,
+            // 150 时 DeepSeek V4-Flash 常把额度花在思考上,正文只剩半句或为空
+            maxOutputTokens: 400,
             providerOptions,
           });
 
@@ -349,7 +355,7 @@ export async function POST(request: Request) {
           const { system: recipeSystem, messages: recipeMessages } = buildChatRecipePrompt(input);
           const { object, usage: recipeUsage } = await generateObject({
             model,
-            schema: ChatResponseSchema,
+            schema: LenientChatResponseSchema,
             system: recipeSystem,
             messages: recipeMessages,
             temperature: 0.7,
@@ -358,8 +364,14 @@ export async function POST(request: Request) {
           });
           addUsage(recipeUsage);
 
-          finalRecipes = object.recipes as Recipe[];
-          sseSend(controller, { type: "recipes", recipes: object.recipes });
+          const recipes = (object.recipes ?? [])
+            .filter((r) => r.title?.trim())
+            .map(normalizeChatRecipe);
+          if (recipes.length === 0) {
+            throw new Error("菜谱没生成出来,再发一次试试");
+          }
+          finalRecipes = recipes;
+          sseSend(controller, { type: "recipes", recipes });
 
           // Persist the assistant message NOW (with text + recipes, no covers
           // yet). Covers come later via Promise.allSettled and might not all
@@ -375,6 +387,7 @@ export async function POST(request: Request) {
           finalRecipes = await enrichWithCovers(finalRecipes);
         }
       } catch (err) {
+        streamFailed = true;
         logErr("stream", err);
         // 402 = 账户没钱了。SDK 原文是 "Payment Required",用户看不出该去充值
         const status = (err as { statusCode?: number } | null)?.statusCode;
@@ -391,11 +404,15 @@ export async function POST(request: Request) {
       }
 
       // Final persist. 三种情况:
-      //   - chat 且未定稿:纯文字消息,现在落库
+      //   - 还没落库(chat 未定稿,或 recipe 推荐中途失败):把已流给用户的
+      //     文字落库。失败时附一句提示,否则重新进入页面连那两句都没了
       //   - chat 且定稿 / recipe 推荐:消息已带 recipes 落库,这里补写
       //     cover-enriched 的版本
-      if (intent === "chat" && !assistantMsgId) {
-        await persistAssistant(fullText, null);
+      if (!assistantMsgId) {
+        await persistAssistant(
+          fullText && streamFailed ? `${fullText}\n\n${FAILED_NOTE}` : fullText,
+          null
+        );
       } else if (assistantMsgId && finalRecipes) {
         const { error } = await supabase
           .from("messages")

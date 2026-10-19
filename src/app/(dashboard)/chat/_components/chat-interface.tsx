@@ -352,13 +352,13 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                   return { recipes: next };
                 });
               } else if (event.type === "error") {
-                const base =
-                  fullReply || event.message || "生成失败，请重试";
+                // 已经流出几句话时也要把出错讲出来,不能停在那两句上装没事
                 const reqId =
                   typeof event.requestId === "string" ? event.requestId : null;
-                updateMessage(msgId, () => ({
-                  content: reqId && !fullReply ? `${base}\n(ID: ${reqId})` : base,
-                }));
+                const content = fullReply
+                  ? `${fullReply}\n\n(话没说完就出错了,再发一次试试)`
+                  : `${event.message || "生成失败，请重试"}${reqId ? `\n(ID: ${reqId})` : ""}`;
+                updateMessage(msgId, () => ({ content }));
               }
             } catch {
               // skip malformed events
