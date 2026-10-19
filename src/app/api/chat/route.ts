@@ -53,6 +53,8 @@ function classifyIntent(message: string): "recipe" | "chat" {
 // 回复说到一半出错时补在文字后面(落库的版本和前端即时显示一致)
 const FAILED_NOTE = "(话没说完就出错了,再发一次试试)";
 
+const TRUNCATED_NOTE = "……\n\n(回复太长被截断了,说「继续」我接着讲)";
+
 // ── SSE helpers ────────────────────────────────────────────────
 
 function sseEncode(data: string): Uint8Array {
@@ -269,13 +271,14 @@ export async function POST(request: Request) {
             input,
             copycat ? { copycat: { canSearch: !!searchModel } } : undefined
           );
-          // 同款:要讲清原版用料 + 在家版,512 token 只够一句话
           const result = streamText({
             model: searchModel?.model ?? model,
             system,
             messages,
             temperature: 0.7,
-            maxOutputTokens: copycat ? 2048 : 512,
+            // 512 会把带配方的回复切在半句上(2026-10-19 抹茶 dirty 停在「形成」);
+            // 上限只在真用到时才花钱,闲聊照样短
+            maxOutputTokens: 2048,
             providerOptions,
             ...(searchModel ? { tools: searchModel.tools } : {}),
           });
@@ -283,6 +286,11 @@ export async function POST(request: Request) {
           for await (const chunk of result.textStream) {
             fullText += chunk;
             sseSend(controller, { type: "text", content: chunk });
+          }
+          // 还是撞了上限就明说,别让用户对着半句话猜
+          if ((await result.finishReason) === "length") {
+            fullText += TRUNCATED_NOTE;
+            sseSend(controller, { type: "text", content: TRUNCATED_NOTE });
           }
           // streamText 的 usage 在流结束后才 resolve
           try {
