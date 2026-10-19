@@ -114,11 +114,28 @@ const nullishToUndef = (v: unknown) => {
 };
 
 const optionalString = z.preprocess(nullishToUndef, z.string().optional());
-const optionalNumber = z.preprocess(nullishToUndef, z.number().optional());
-const optionalDifficulty = z.preprocess(
-  nullishToUndef,
-  z.enum(["easy", "medium", "hard"]).optional()
-);
+// "2"、"15分钟" 这类带数字的字符串取出数字;取不出就当没给,别拖垮整道菜
+const optionalNumber = z.preprocess((v) => {
+  const x = nullishToUndef(v);
+  if (typeof x !== "string") return x;
+  const m = x.match(/\d+(\.\d+)?/);
+  return m ? Number(m[0]) : undefined;
+}, z.number().optional());
+const DIFFICULTY_ALIASES: Record<string, "easy" | "medium" | "hard"> = {
+  简单: "easy",
+  容易: "easy",
+  中等: "medium",
+  一般: "medium",
+  困难: "hard",
+  难: "hard",
+};
+const optionalDifficulty = z.preprocess((v) => {
+  const x = nullishToUndef(v);
+  if (typeof x !== "string") return x;
+  const key = x.trim().toLowerCase();
+  if (key === "easy" || key === "medium" || key === "hard") return key;
+  return DIFFICULTY_ALIASES[key];
+}, z.enum(["easy", "medium", "hard"]).optional());
 
 export const ImportedRecipeSchema = z.object({
   title: optionalString,
@@ -254,6 +271,49 @@ export const ChatResponseSchema = z.object({
 });
 
 export type ChatResponse = z.infer<typeof ChatResponseSchema>;
+
+// 聊天推荐菜谱用的宽松版。DeepSeek 只有 json_object 模式、不受 schema 约束,
+// 偶尔漏个字段或 difficulty 写成中文,严格的 ChatResponseSchema 会让三道菜
+// 整体作废(2026-10-19 用户「抹茶拿铁 来个recipe」第一遍只出两行就停了)。
+// 全部 optional,路由层用 normalizeChatRecipe 补默认值。
+const optionalNutrition = z.preprocess(
+  nullishToUndef,
+  z
+    .object({
+      calories: optionalNumber,
+      proteinG: optionalNumber,
+      carbsG: optionalNumber,
+      fatG: optionalNumber,
+    })
+    .optional()
+);
+
+export const LenientChatResponseSchema = z.object({
+  reply: optionalString,
+  recipes: z
+    .array(ImportedRecipeSchema.extend({ nutritionEstimate: optionalNutrition }))
+    .optional(),
+});
+
+type LenientChatRecipe = NonNullable<
+  z.infer<typeof LenientChatResponseSchema>["recipes"]
+>[number];
+
+export function normalizeChatRecipe(partial: LenientChatRecipe): Recipe {
+  const n = partial.nutritionEstimate;
+  return {
+    ...normalizeImportedRecipe(partial),
+    // 营养四项齐了才保留,缺一项的估算没法用来记摄入
+    nutritionEstimate:
+      n &&
+      n.calories !== undefined &&
+      n.proteinG !== undefined &&
+      n.carbsG !== undefined &&
+      n.fatG !== undefined
+        ? { calories: n.calories, proteinG: n.proteinG, carbsG: n.carbsG, fatG: n.fatG }
+        : undefined,
+  };
+}
 
 // ---------- Service interface ----------
 
