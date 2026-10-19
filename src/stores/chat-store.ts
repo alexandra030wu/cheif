@@ -3,7 +3,8 @@ import type { Recipe } from "@/lib/ai-service";
 
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant";
+  // divider = 用户手动开的「新对话」分隔线,不发给模型
+  role: "user" | "assistant" | "divider";
   content: string;
   recipes?: Recipe[];
   // Server timestamp (ISO). Optional for in-flight client-only msgs that

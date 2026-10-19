@@ -172,7 +172,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          role: "user" | "assistant";
+          role: "user" | "assistant" | "divider";
           content: string;
           recipes: Json | null;
           created_at: string;
@@ -180,13 +180,13 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          role: "user" | "assistant";
+          role: "user" | "assistant" | "divider";
           content?: string;
           recipes?: Json | null;
           created_at?: string;
         };
         Update: {
-          role?: "user" | "assistant";
+          role?: "user" | "assistant" | "divider";
           content?: string;
           recipes?: Json | null;
         };

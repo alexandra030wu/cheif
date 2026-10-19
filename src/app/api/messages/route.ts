@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export const maxDuration = 10;
 
 const PostSchema = z.object({
-  role: z.enum(["user", "assistant"]),
+  role: z.enum(["user", "assistant", "divider"]),
   // 必须 trim 后非空。空 content 一旦入库，下一次构造 prompt 时 spread 进
   // Anthropic messages 数组就会触发 400「empty content block」。
   content: z.string().transform((s) => s.trim()).pipe(z.string().min(1)),
