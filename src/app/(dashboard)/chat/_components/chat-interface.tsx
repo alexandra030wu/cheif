@@ -604,8 +604,8 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                 </div>
               )}
 
-            {/* Spacer for input bar */}
-            <div className="h-16" />
+            {/* 给底部输入卡让位(两段式输入卡约 95px 高) */}
+            <div className="h-28" />
           </div>
         )}
       </div></div>
