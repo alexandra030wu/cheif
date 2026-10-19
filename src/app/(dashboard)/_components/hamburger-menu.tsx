@@ -7,7 +7,7 @@ import { LogoutButton } from "./logout-button";
 
 /* 图标:lucide 线稿风,stroke-width 1.8(DanOS 规范;项目未装 lucide-react 依赖,
  * 手抄 path 内联 svg,风格对齐 recipe-card.tsx 的时钟图标写法) */
-const navItems = [
+export const navItems = [
   {
     href: "/chat",
     label: "聊天",

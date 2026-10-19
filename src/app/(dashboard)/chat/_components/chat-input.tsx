@@ -66,7 +66,7 @@ export const ChatInput = memo(function ChatInput({
     // Claude 客户端式:输入是一枚浮在画布上的圆角容器,发送钮在框内。
     // 过渡分两层:上缘毛玻璃渐变(规格与顶栏一致)遮住滑过的历史消息;
     // 输入框下沿到窗口底边为纯实色,不透任何文字。
-    <div className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+    <div className="fixed bottom-0 left-0 md:left-52 right-0 z-30 pointer-events-none">
       {/* 过渡层收窄到输入列同宽(max-w-2xl),不横穿全窗 —
           免得盖住窗口右缘的滚动条;消息列同宽,列外本来就没有文字 */}
       <div className="relative mx-auto max-w-2xl">

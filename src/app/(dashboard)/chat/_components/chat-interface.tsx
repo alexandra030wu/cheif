@@ -78,6 +78,14 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
     hydrate(initialMessages ?? []);
   }, [initialMessages, hydrate]);
 
+  // 从别的页点侧栏「新对话」会跳到 /chat?new=1:hydrate 之后插分隔线,再把参数抹掉
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("new") !== "1") return;
+    startNewConversation();
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
   // Pagination state for "load older messages" on scroll-to-top.
   const [olderExhausted, setOlderExhausted] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -512,12 +520,11 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
   }, [messages]);
 
   return (
-    // 桌面端:滚动容器铺满整个窗口(fixed inset-0),内容列在里面居中 —
-    // 这样文字能一路滚到窗口顶,穿过顶栏渐变层渐隐(而不是在列顶被硬裁),
-    // 滚动条也落在窗口最右缘。顶栏 z-40 盖在本层之上。
-    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:fixed md:inset-0 md:h-auto">
+    // 桌面端:滚动容器铺满侧栏右边的整块区域(fixed,左边让出 w-52 侧栏),
+    // 内容列在里面居中;文字一路滚到窗口顶,滚动条落在窗口最右缘。
+    <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:fixed md:inset-y-0 md:right-0 md:left-52 md:h-auto">
       {/* Header */}
-      {/* 移动端:玻璃标题条;桌面端:顶栏胶囊已代劳,这里只留右上角用量徽章 */}
+      {/* 移动端:玻璃标题条;桌面端由左侧栏代劳 */}
       <header className="md:hidden shrink-0 flex items-center justify-between py-3 border-b border-pebble/50 glass-frost pl-12 pr-3">
         <span className="text-base font-logo text-ink">蛋厨</span>
         <NewConversationButton />
@@ -525,9 +532,8 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl)。
-            pt-16 在内容里(随滚动移出),给顶栏胶囊让出初始位置 */}
-        <div className="mx-auto w-full max-w-2xl md:pt-16">
+        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl) */}
+        <div className="mx-auto w-full max-w-2xl md:pt-6">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full px-6">
             <p className="text-base text-ink-muted font-light">
@@ -621,7 +627,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
   );
 }
 
-/** 「新对话」按钮:移动端标题条右侧和桌面顶栏(top-nav.tsx)共用这一个 */
+/** 移动端标题条右侧的「新对话」按钮(桌面端在 side-nav.tsx) */
 export function NewConversationButton() {
   return (
     <button
