@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NewConversationButton } from "../chat/_components/chat-interface";
 
 const NAV_ITEMS = [
   { href: "/chat", label: "聊天" },
@@ -49,7 +50,10 @@ export function TopNav(_props: { userEmail: string }) {
             );
           })}
         </nav>
-        <span aria-hidden className="justify-self-end" />
+        {/* 右侧:聊天页才有「新对话」 */}
+        <span className="justify-self-end">
+          {pathname.startsWith("/chat") && <NewConversationButton />}
+        </span>
       </div>
       </div>
     </header>

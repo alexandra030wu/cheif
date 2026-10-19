@@ -6,6 +6,7 @@ import { useChatStore, type ChatMessage } from "@/stores/chat-store";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { RecipeDetailSheet } from "./recipe-detail-sheet";
+import { startNewConversation } from "@/lib/chat/new-conversation";
 
 type TimeOfDay = "morning" | "noon" | "evening" | "latenight";
 
@@ -268,7 +269,13 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
       const HISTORY_LIMIT = 20;
       const allMsgs = useChatStore.getState().messages;
       // Strip the just-added user message (last entry) and trim down.
-      const priorMsgs = allMsgs.slice(0, -1).slice(-HISTORY_LIMIT);
+      // 用户手动开过「新对话」的话,只取最后一条分隔线之后的消息。
+      const beforeCurrent = allMsgs.slice(0, -1);
+      const lastDivider = beforeCurrent.findLastIndex((m) => m.role === "divider");
+      const priorMsgs = beforeCurrent
+        .slice(lastDivider + 1)
+        .filter((m): m is ChatMessage & { role: "user" | "assistant" } => m.role !== "divider")
+        .slice(-HISTORY_LIMIT);
       const history = priorMsgs.map((m) => ({
         role: m.role,
         // Skip recipe payload — the LLM only needs textual context. Include
@@ -511,8 +518,9 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
     <div className="flex flex-col h-[calc(100vh-env(safe-area-inset-top,0px))] md:fixed md:inset-0 md:h-auto">
       {/* Header */}
       {/* 移动端:玻璃标题条;桌面端:顶栏胶囊已代劳,这里只留右上角用量徽章 */}
-      <header className="md:hidden shrink-0 flex items-center py-3 border-b border-pebble/50 glass-frost pl-12 pr-3">
+      <header className="md:hidden shrink-0 flex items-center justify-between py-3 border-b border-pebble/50 glass-frost pl-12 pr-3">
         <span className="text-base font-logo text-ink">蛋厨</span>
+        <NewConversationButton />
       </header>
 
       {/* Messages area */}
@@ -552,13 +560,24 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
                 <div className="text-center text-[10px] uppercase tracking-wider text-ink-muted/60 my-3 select-none">
                   {group.label}
                 </div>
-                {group.items.map((msg) => (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    onRecipeTap={handleRecipeTap}
-                  />
-                ))}
+                {group.items.map((msg) =>
+                  msg.role === "divider" ? (
+                    <div
+                      key={msg.id}
+                      className="flex items-center gap-3 px-6 my-2 text-[11px] text-ink-muted/70 select-none"
+                    >
+                      <span className="h-px flex-1 bg-pebble/70" />
+                      {msg.content}
+                      <span className="h-px flex-1 bg-pebble/70" />
+                    </div>
+                  ) : (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      onRecipeTap={handleRecipeTap}
+                    />
+                  )
+                )}
               </Fragment>
             ))}
 
@@ -599,5 +618,23 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
         onClose={() => setSelectedRecipe(null)}
       />
     </div>
+  );
+}
+
+/** 「新对话」按钮:移动端标题条右侧和桌面顶栏(top-nav.tsx)共用这一个 */
+export function NewConversationButton() {
+  return (
+    <button
+      type="button"
+      onClick={startNewConversation}
+      className="rounded-full p-2 text-ink-muted hover:bg-white/70 hover:text-ink transition-colors"
+      aria-label="新对话"
+      title="新对话"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+        <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
+      </svg>
+    </button>
   );
 }

@@ -59,7 +59,7 @@ async function ChatLoader() {
       })
       .map((m) => ({
         id: m.id,
-        role: m.role as "user" | "assistant",
+        role: m.role,
         content: m.content,
         recipes: Array.isArray(m.recipes) ? (m.recipes as unknown as Recipe[]) : undefined,
         createdAt: m.created_at,
