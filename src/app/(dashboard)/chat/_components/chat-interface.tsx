@@ -532,8 +532,8 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* 桌面响应式:消息流与输入条同宽居中(max-w-2xl) */}
-        <div className="mx-auto w-full max-w-2xl md:pt-6">
+        {/* 桌面响应式:消息流与输入条同宽居中(max-w-3xl) */}
+        <div className="mx-auto w-full max-w-3xl md:pt-6">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full px-6">
             <p className="text-base text-ink-muted font-light">
@@ -541,7 +541,7 @@ export function ChatInterface({ ingredients, userPreferences, tasteProfile, init
             </p>
           </div>
         ) : (
-          <div className="py-4 space-y-4 max-w-2xl mx-auto">
+          <div className="py-4 space-y-4 max-w-3xl mx-auto">
             {/* Visible affordance for loading older messages — pull-to-load
                 isn't discoverable on its own. */}
             {!olderExhausted && (
