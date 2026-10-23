@@ -1,4 +1,4 @@
-// anytocopy.com Open API 客户端 — 抖音等平台视频 → 语音文稿
+// anytocopy.com Open API 客户端 — 抖音等平台视频 → 语音文稿；小红书图文 → 图片文字
 // 凭证仅在服务端使用，勿在客户端代码中引用本模块
 
 const DEFAULT_BASE_URL = "https://api.anytocopy.com/vip/open-api/v1";
@@ -73,4 +73,65 @@ export async function queryVideoExtractTask(taskId: string): Promise<VideoExtrac
     return { status: "failed", error: data.errorMessage || "视频提取失败" };
   }
   return { status: "pending" };
+}
+
+// ── 图文笔记 → 图片 OCR（小红书等）────────────────────────────
+// 传作品链接，一次拿到标题、正文和每张图上的文字。专业版额度不限量，
+// 但单用户并发上限 2。视频笔记也会成功，只是 dataList 里只有一张封面。
+
+export async function submitImageOcrTask(workUrl: string): Promise<string> {
+  const res = await fetch(`${baseUrl()}/image/ocr/doTask`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "workUrl", workUrl }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`图片识别服务异常（HTTP ${res.status}）`);
+
+  const payload = await res.json();
+  if (payload?.code !== 200) {
+    throw new Error(payload?.msg || "提交图片识别任务失败");
+  }
+  if (typeof payload.data !== "string" || !payload.data) {
+    throw new Error("图片识别服务未返回任务 ID");
+  }
+  return payload.data;
+}
+
+export interface ImageOcrResult {
+  status: "pending" | "success";
+  title?: string;
+  /** 作品正文 */
+  caption?: string;
+  /** 每张图识别出的文字，按图片顺序；处理中时只含已完成的图 */
+  imageTexts: string[];
+  /** 作品总图数（视频笔记通常只有封面 1 张） */
+  imageCount: number;
+}
+
+export async function queryImageOcrTask(taskId: string): Promise<ImageOcrResult> {
+  const params = new URLSearchParams({ taskId });
+  const res = await fetch(`${baseUrl()}/image/ocr/queryTask?${params}`, {
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new Error(`图片识别服务异常（HTTP ${res.status}）`);
+
+  const payload = await res.json();
+  if (payload?.code !== 200) {
+    throw new Error(payload?.msg || "查询图片识别任务失败");
+  }
+
+  const data = payload.data ?? {};
+  const list: Array<{ content?: unknown }> = Array.isArray(data.dataList) ? data.dataList : [];
+  return {
+    // 文档：1 处理中，2 已完成
+    status: Number(data.status) === 2 ? "success" : "pending",
+    title: typeof data.title === "string" ? data.title : "",
+    caption: typeof data.content === "string" ? data.content : "",
+    imageTexts: list
+      .map((item) => (typeof item.content === "string" ? item.content.trim() : ""))
+      .filter(Boolean),
+    imageCount: list.length,
+  };
 }
