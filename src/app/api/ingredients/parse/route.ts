@@ -1,5 +1,9 @@
 import { generateObject } from "ai";
-import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import {
+  createLanguageModelProvider,
+  resolveProviderConfig,
+  DEEPSEEK_NO_THINKING,
+} from "@/lib/ai-service/registry";
 import { createClient } from "@/lib/supabase/server";
 import { getUserProviderId } from "@/lib/ai-service/user-provider";
 import { z } from "zod";
@@ -39,6 +43,7 @@ export async function POST(request: Request) {
     model,
     schema: ParsedIngredientListSchema,
     temperature: 0.2,
+    providerOptions: DEEPSEEK_NO_THINKING,
     prompt: `你是一个厨房助手。请从下面这段自然语言中提取所有食材信息，解析出每个食材的名称、数量、单位和分类。
 分类只能是以下之一：vegetable（蔬菜）、fruit（水果）、protein（蛋白质/肉/蛋/豆）、dairy（乳制品）、grain（谷物/主食）、spice（香料）、condiment（调味品）、other（其他）。
 如果某个字段无法确定，则省略它。

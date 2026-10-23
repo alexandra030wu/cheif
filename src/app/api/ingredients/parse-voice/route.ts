@@ -1,5 +1,9 @@
 import { generateObject } from "ai";
-import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import {
+  createLanguageModelProvider,
+  resolveProviderConfig,
+  DEEPSEEK_NO_THINKING,
+} from "@/lib/ai-service/registry";
 import { createClient } from "@/lib/supabase/server";
 import { getUserProviderId } from "@/lib/ai-service/user-provider";
 import { z } from "zod";
@@ -54,6 +58,7 @@ export async function POST(request: Request) {
       model,
       schema: VoiceActionSchema,
       temperature: 0.2,
+      providerOptions: DEEPSEEK_NO_THINKING,
       prompt: `你是食材识别助手。用户正在用语音添加食材到冰箱。今天是 ${today}。
 
 当前已识别的食材列表：${currentListStr}
