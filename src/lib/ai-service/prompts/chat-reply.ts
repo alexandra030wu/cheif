@@ -31,6 +31,24 @@ const COPYCAT_RULES = (canSearch: boolean) => `## 本轮：复刻「同款」
 - 可以用小标题和列表，篇幅以讲清楚为准，不受 2-4 句限制
 - 不要输出 JSON；不要写「我先搜索一下」这类过程话`;
 
+// 前端在带卡片的历史回复末尾加「[已展示 N 道菜谱卡片：…]」给模型当上下文。
+// 留在 assistant 自己的话里,纯聊天时模型会照抄、编出根本没生成的假卡片
+// (DeepSeek 关思考后 4 次 3 次)。这里把它摘出来,改成 system 里的一句说明。
+const CARD_NOTE = /\n*\[已展示 \d+ 道菜谱卡片：([^\]]*)\]/g;
+
+function liftCardNotes(history: PromptMessage[]): { history: PromptMessage[]; shown: string[] } {
+  const shown: string[] = [];
+  const cleaned = history.map((m) => {
+    if (m.role !== "assistant") return m;
+    const content = m.content.replace(CARD_NOTE, (_, titles: string) => {
+      shown.push(...titles.split("、").map((t) => t.trim()).filter(Boolean));
+      return "";
+    });
+    return { ...m, content: content.trim() || "（给用户展示了菜谱卡片）" };
+  });
+  return { history: cleaned, shown };
+}
+
 export function buildChatReplyPrompt(
   input: ChatRecipeInput,
   opts?: { copycat?: { canSearch: boolean } }
@@ -63,14 +81,20 @@ ${buildTasteBlock(input.tasteProfile, nickname)}
 - 用户表达情绪时先共情，再自然地建议做菜缓解（如"辛苦了！要不要我推荐点省事的菜？"）
 - 如果用户想要菜谱推荐，引导他们说出具体想法（"想吃什么类型的？"）
 - 不要输出 JSON 或结构化数据，只用自然语言回复
-- **你能读到上方的多轮对话历史，请把它当成真实的连续聊天，不要装作不记得之前说过的话**`;
+- **你能读到上方的多轮对话历史，请把它当成真实的连续聊天，不要装作不记得之前说过的话**
+- 菜谱卡片只有系统能生成，你这一轮只能用文字聊天：不要说你已经给出了菜谱 / 菜单；用户想要具体菜谱时，可以先用文字聊思路，再告诉他说「推荐一下」就能拿到完整菜谱卡片`;
 
+  const { history, shown } = liftCardNotes(input.history ?? []);
+  const shownBlock = shown.length
+    ? `\n\n## 之前已经用菜谱卡片给用户展示过\n${shown.join("、")}（卡片是系统生成的，聊天里可以提到这些菜）`
+    : "";
+  const withShown = base + shownBlock;
   const system = opts?.copycat
-    ? `${base}\n\n${COPYCAT_RULES(opts.copycat.canSearch)}`
-    : base;
+    ? `${withShown}\n\n${COPYCAT_RULES(opts.copycat.canSearch)}`
+    : withShown;
 
   const messages: PromptMessage[] = [
-    ...(input.history ?? []),
+    ...history,
     { role: "user", content: input.message },
   ];
 

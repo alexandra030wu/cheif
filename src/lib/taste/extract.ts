@@ -1,5 +1,9 @@
 import { generateObject } from "ai";
-import { createLanguageModelProvider, resolveProviderConfig } from "@/lib/ai-service/registry";
+import {
+  createLanguageModelProvider,
+  resolveProviderConfig,
+  DEEPSEEK_NO_THINKING,
+} from "@/lib/ai-service/registry";
 import type { AIProviderID } from "@/lib/ai-service/types";
 import { TasteExtractionSchema, type TasteSignal } from "./types";
 
@@ -55,6 +59,7 @@ export async function extractTasteSignals(
       prompt: EXTRACTION_PROMPT.replace("{conversation}", conversation),
       temperature: 0.3,
       maxOutputTokens: 500,
+      providerOptions: DEEPSEEK_NO_THINKING,
     });
 
     return object.signals;

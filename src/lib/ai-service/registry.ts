@@ -73,6 +73,14 @@ export function createLanguageModelProvider(config: AIProviderConfig) {
   }
 }
 
+// DeepSeek V4 默认开思考,reasoning token 也算进 maxOutputTokens:菜谱 JSON、
+// 长文稿提取这类长输出会被挤爆 → 截断解析失败或空返回(实测 6 人一桌菜
+// 思考 1513 + 正文 2582 撞 4096)。蛋厨的调用都是照 prompt 办事,不需要思考,
+// 统一关掉,还快一倍。providerOptions 按 provider 分键,其他 provider 会忽略。
+export const DEEPSEEK_NO_THINKING = {
+  deepseek: { thinking: { type: "disabled" as const } },
+};
+
 // DeepSeek 的 OpenAI 协议接口没有联网搜索;它的 Anthropic 兼容接口原生支持
 // web_search_20250305(DanShots v0.33 实测,2026-10-12 在蛋厨复测:伯牙绝弦
 // 搜 2 次、约 11s)。只有这个接口上的 deepseek-flash 实测过,所以写死。

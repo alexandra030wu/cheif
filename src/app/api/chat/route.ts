@@ -3,6 +3,7 @@ import {
   createLanguageModelProvider,
   createSearchModelProvider,
   resolveProviderConfig,
+  DEEPSEEK_NO_THINKING,
 } from "@/lib/ai-service/registry";
 import {
   LenientChatResponseSchema,
@@ -33,7 +34,7 @@ export const maxDuration = 120;
 // recipe；现在只匹配明确的"求推荐"信号，且疑问句优先识别为 chat。
 
 const RECIPE_KEYWORDS =
-  /推荐|食谱|菜谱|来个|来道|来一道|想吃|饿了|做什么|做啥|做点什么|帮我想|配什么|搭配|早餐|午餐|晚餐|夜宵|加餐|便当|减脂餐|健身餐|快手菜/;
+  /推荐|食谱|菜谱|来个|来道|来一道|想吃|饿了|做什么|做啥|做点什么|帮我想|配什么|搭配|早餐|午餐|晚餐|夜宵|加餐|便当|减脂餐|健身餐|快手菜|一桌|请客|请.{0,10}吃饭|菜单|[一二两三四五六\d]荤[一二两三四五六\d]?素/;
 
 // 疑问句句尾或求建议的句式：用户在问问题 / 想了解，不是要菜谱
 const QUESTION_SUFFIX = /[?？]$|吗[?？！。\s]*$|呢[?？！。\s]*$/;
@@ -227,11 +228,13 @@ export async function POST(request: Request) {
   // 缓存断点（system + 早期 messages 是稳定前缀，刚好被缓存）。
   // - 命中读取 cache 只收 0.1× 价
   // - 写新缓存收 1.25×（5 分钟内连续请求很快回本）
-  // DeepSeek 不支持，不传 providerOptions。
+  // DeepSeek 不支持缓存控制，改为关掉默认思考（否则 4096 上限装不下一桌菜谱）。
   const providerOptions =
     config.id === "anthropic"
       ? { anthropic: { cacheControl: { type: "ephemeral" as const } } }
-      : undefined;
+      : config.id === "deepseek"
+        ? DEEPSEEK_NO_THINKING
+        : undefined;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -345,6 +348,7 @@ export async function POST(request: Request) {
             messages: chatMessages,
             temperature: 0.7,
             // 150 时 DeepSeek V4-Flash 常把额度花在思考上,正文只剩半句或为空
+            // (现已关思考,400 留着兜底)
             maxOutputTokens: 400,
             providerOptions,
           });
@@ -367,7 +371,9 @@ export async function POST(request: Request) {
             system: recipeSystem,
             messages: recipeMessages,
             temperature: 0.7,
-            maxOutputTokens: 4096,
+            // 一桌 6 道菜的 JSON 正文就要 ~4100 token,4096 会被截断解析失败;
+            // 上限只是天花板,平时 1-3 道菜用不到
+            maxOutputTokens: 8192,
             providerOptions,
           });
           addUsage(recipeUsage);
