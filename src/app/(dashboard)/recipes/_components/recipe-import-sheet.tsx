@@ -17,6 +17,18 @@ type Stage = "input" | "extracting" | "preview";
 type Mode = "image" | "text" | "link";
 
 const LINK_PATTERN = /https?:\/\/[^\s，。！,!]+/;
+// 小红书链接先走图片 OCR（图文笔记的配料常常只写在图上）
+const XHS_PATTERN = /xiaohongshu\.com|xhslink\.com/i;
+// anytocopy 不支持下厨房，网页又有滑块验证，只能截图 / 复制文字导入
+const XIACHUFANG_PATTERN = /xiachufang\.com/i;
+
+interface NoteOcrResult {
+  status: "pending" | "success";
+  title?: string;
+  caption?: string;
+  imageTexts?: string[];
+  imageCount?: number;
+}
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -40,6 +52,7 @@ export function RecipeImportSheet({ open, onClose }: Props) {
   const [pastedText, setPastedText] = useState("");
   const [linkText, setLinkText] = useState("");
   const [extractingHint, setExtractingHint] = useState("");
+  const [extractingLabel, setExtractingLabel] = useState("");
   const [inputError, setInputError] = useState("");
 
   // preview state (editable Recipe)
@@ -129,6 +142,7 @@ export function RecipeImportSheet({ open, onClose }: Props) {
       );
     }
 
+    setExtractingLabel("蛋厨正在看视频…");
     setExtractingHint("正在提取视频语音，通常需要 1-2 分钟…");
     const deadline = Date.now() + 4 * 60_000;
     while (Date.now() < deadline) {
@@ -157,12 +171,70 @@ export function RecipeImportSheet({ open, onClose }: Props) {
     throw new Error("提取超时，视频可能过长，请换个视频或稍后重试");
   }, []);
 
+  // 小红书链接 → 图片 OCR（标题 + 正文 + 每张图上的字）。只有 0-1 张图的
+  // 多半是视频笔记（那张是封面），再补一次语音转写。
+  const fetchNoteText = useCallback(async (shareText: string) => {
+    const submitRes = await fetch("/api/recipes/import-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: shareText, kind: "note" }),
+    });
+    const submitData = await submitRes.json().catch(() => ({}));
+    if (!submitRes.ok || !submitData?.taskId) {
+      throw new Error(
+        typeof submitData?.error === "string" ? submitData.error : "提交笔记识别任务失败"
+      );
+    }
+
+    setExtractingLabel("蛋厨正在看笔记…");
+    setExtractingHint("正在识别笔记图片里的文字，图多的话要 1-2 分钟…");
+    let note: NoteOcrResult | null = null;
+    const deadline = Date.now() + 4 * 60_000;
+    while (Date.now() < deadline) {
+      await sleep(3000);
+      const res = await fetch(
+        `/api/recipes/import-video?kind=note&taskId=${encodeURIComponent(submitData.taskId)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "查询失败，请重试");
+      }
+      note = data as NoteOcrResult;
+      if (note.status === "success") break;
+    }
+    // 超时也用已经识别出来的部分，图特别多的笔记不至于整单失败
+    if (!note) throw new Error("提取超时，请稍后重试");
+
+    let body = note.caption ?? "";
+    if ((note.imageCount ?? 0) <= 1) {
+      try {
+        body = await fetchVideoTranscript(shareText); // 已含正文
+      } catch {
+        // 单图图文笔记或转写失败：用 OCR 拿到的正文
+      }
+    }
+    const imageTexts = (note.imageTexts ?? []).map((t, i) => `【图 ${i + 1}】\n${t}`);
+    const combined = [note.title, body, ...imageTexts]
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .join("\n\n")
+      .slice(0, 8000);
+    if (combined.trim().length < 20) {
+      throw new Error("笔记里没有识别到足够的内容");
+    }
+    return combined;
+  }, [fetchVideoTranscript]);
+
   const handleExtract = useCallback(async () => {
     setInputError("");
     setExtractingHint("");
+    setExtractingLabel("");
 
     if (mode === "link" && !LINK_PATTERN.test(linkText)) {
-      setInputError("没有找到链接，请粘贴抖音分享的完整文字或链接");
+      setInputError("没有找到链接，请粘贴抖音或小红书分享的完整文字或链接");
+      return;
+    }
+    if (mode === "link" && XIACHUFANG_PATTERN.test(linkText)) {
+      setInputError("下厨房链接暂时导不了，请截图或复制菜谱文字导入");
       return;
     }
     if (mode === "image" && !imageBase64) {
@@ -183,7 +255,9 @@ export function RecipeImportSheet({ open, onClose }: Props) {
               mode: "text",
               text:
                 mode === "link"
-                  ? await fetchVideoTranscript(linkText.trim())
+                  ? XHS_PATTERN.test(linkText)
+                    ? await fetchNoteText(linkText.trim())
+                    : await fetchVideoTranscript(linkText.trim())
                   : pastedText.trim(),
             };
 
@@ -205,7 +279,7 @@ export function RecipeImportSheet({ open, onClose }: Props) {
       setInputError(err instanceof Error ? err.message : "提取失败，请重试");
       setStage("input");
     }
-  }, [mode, imageBase64, imageMime, pastedText, linkText, fetchVideoTranscript]);
+  }, [mode, imageBase64, imageMime, pastedText, linkText, fetchVideoTranscript, fetchNoteText]);
 
   const handleSave = useCallback(async () => {
     if (!draft || saving) return;
@@ -306,7 +380,7 @@ export function RecipeImportSheet({ open, onClose }: Props) {
                 <span className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:300ms]" />
               </div>
               <p className="text-sm text-ink-soft">
-                {extractingHint ? "蛋厨正在看视频…" : "蛋厨正在读菜谱…"}
+                {extractingHint ? extractingLabel || "蛋厨正在看视频…" : "蛋厨正在读菜谱…"}
               </p>
               <p className="text-xs text-ink-muted mt-1">
                 {extractingHint || "通常需要 5-15 秒"}
@@ -427,7 +501,7 @@ function InputStage({
             mode === "link" ? "bg-ink text-white shadow-sm" : "text-ink-muted hover:text-ink-soft"
           }`}
         >
-          🔗 视频链接
+          🔗 链接
         </button>
       </div>
 
@@ -493,7 +567,7 @@ function InputStage({
       {mode === "link" && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-ink-soft">抖音视频链接</label>
+            <label className="text-sm font-medium text-ink-soft">抖音 / 小红书链接</label>
             <button
               type="button"
               onClick={onPaste}
@@ -505,12 +579,12 @@ function InputStage({
           <textarea
             value={linkText}
             onChange={(e) => setLinkText(e.target.value)}
-            placeholder="在抖音里点「分享 → 复制链接」，把整段文字粘到这里即可&#10;例如：7.99 abc:/ 复制打开抖音… https://v.douyin.com/xxxx/"
+            placeholder="在抖音或小红书里点「分享 → 复制链接」，把整段文字粘到这里即可&#10;例如：7.99 abc:/ 复制打开抖音… https://v.douyin.com/xxxx/"
             rows={4}
             className={`${inputClass} resize-none`}
           />
           <p className="text-xs text-ink-muted">
-            蛋厨会听完视频里的讲解，自动整理成菜谱。视频越短越快，通常 1-2 分钟。
+            视频会听完讲解，图文笔记会连图片上的字一起读，自动整理成菜谱。通常 1-2 分钟。
           </p>
         </div>
       )}
