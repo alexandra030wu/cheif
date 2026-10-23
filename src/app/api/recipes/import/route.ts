@@ -91,6 +91,9 @@ export async function POST(request: Request) {
       schema: ImportedRecipeSchema,
       temperature: 0.2,
       maxOutputTokens: 4096,
+      // DeepSeek V4 默认开思考,长文稿会把 4096 全烧在 reasoning 上、一个字
+      // 不输出(finishReason: length)。提取不需要思考,关掉。其他 provider 忽略。
+      providerOptions: { deepseek: { thinking: { type: "disabled" } } },
       prompt: buildTextExtractionPrompt(parsed.data.text),
     });
     return Response.json({ recipe: object });
