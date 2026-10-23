@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
   normalizeImportedRecipe,
   type ImportedRecipe,
@@ -785,21 +786,21 @@ function PreviewStage({
                 value={ing.name}
                 onChange={(e) => updateIngredient(idx, { name: e.target.value })}
                 placeholder="食材名"
-                className={`${inputClass} flex-1`}
+                className={cn(inputClass, "flex-1 min-w-0")}
               />
               <input
                 type="text"
                 value={ing.amount}
                 onChange={(e) => updateIngredient(idx, { amount: e.target.value })}
                 placeholder="量"
-                className={`${inputClass} w-16`}
+                className={cn(inputClass, "w-16 shrink-0")}
               />
               <input
                 type="text"
                 value={ing.unit}
                 onChange={(e) => updateIngredient(idx, { unit: e.target.value })}
                 placeholder="单位"
-                className={`${inputClass} w-16`}
+                className={cn(inputClass, "w-16 shrink-0")}
               />
               <button
                 type="button"
